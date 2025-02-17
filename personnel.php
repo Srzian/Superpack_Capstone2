@@ -47,12 +47,6 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
-// Handle record edit
-if (isset($_GET['edit'])) {
-    $recordIndex = $_GET['edit'];
-    $recordToEdit = $_SESSION['personnel_records'][$recordIndex];
-}
-
 // Filter records by search keyword
 $searchKeyword = isset($_POST['search']) ? $_POST['search'] : '';
 $departmentFilter = isset($_POST['department_filter']) ? $_POST['department_filter'] : '';
@@ -74,7 +68,6 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Sidebar and general styling */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -138,49 +131,6 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             transition: margin-left 0.3s ease;
         }
 
-        /* Modal Styling */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal-content {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            width: 400px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .modal input, .modal select, .modal button {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            font-size: 16px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-
-        .modal button {
-            background-color: #4a90e2;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .modal button:hover {
-            background-color: #357ab7;
-        }
-
-        /* Record Table and Filter */
         .filters {
             display: flex;
             justify-content: space-between;
@@ -195,6 +145,7 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             margin-left: 10px;
         }
 
+        /* Table for records */
         .record-table {
             width: 100%;
             margin-top: 20px;
@@ -202,7 +153,7 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             overflow: hidden;
-            table-layout: fixed; /* Ensure consistent table layout */
+            table-layout: fixed;
         }
 
         .record-table thead {
@@ -211,9 +162,9 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
         }
 
         .record-table th, .record-table td {
-            padding: 12px 15px; /* Adjusted padding for more consistent spacing */
+            padding: 12px 15px;
             text-align: left;
-            word-wrap: break-word; /* Ensure long words break and fit the table */
+            word-wrap: break-word;
         }
 
         .record-table th {
@@ -253,24 +204,87 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             background-color: #357ab7;
         }
 
-        /* Expand Section */
-        .expandable-content {
+        /* Modal Styling */
+        .modal {
             display: none;
-            margin-top: 10px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
         }
 
-        .expand-btn {
-            background-color: #f4f6f9;
-            padding: 8px;
-            border: none;
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            width: 400px;
+        }
+
+        .modal input, .modal select, .modal button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .modal button {
+            background-color: #4a90e2;
+            color: white;
             cursor: pointer;
-            color: #4a90e2;
         }
 
-        .expand-btn:hover {
-            background-color: #e0e0e0;
+        .modal button:hover {
+            background-color: #357ab7;
         }
 
+        /* Print Styling */
+        @media print {
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+            }
+
+            .sidebar, .content {
+                display: none;
+            }
+
+            .print-container {
+                width: 100%;
+                padding: 20px;
+            }
+
+            .print-container table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .print-container th, .print-container td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+
+            .print-container th {
+                background-color: #2e3a59;
+                color: white;
+            }
+
+            .company-logo {
+                width: 100px;
+                height: auto;
+            }
+
+            .print-btn {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -337,27 +351,43 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
                     <td><?php echo htmlspecialchars($record['date_of_hire']); ?></td>
                     <td><?php echo htmlspecialchars($record['status']); ?></td>
                     <td>
-                        <a href="?delete=<?php echo $index; ?>" class="action-btn">Delete</a>
-                        <a href="?edit=<?php echo $index; ?>" class="action-btn">Edit</a>
-                        <button class="expand-btn" onclick="toggleSeeMore(<?php echo $index; ?>)">See More</button>
+                        <a href="personnel_records.php?delete=<?php echo $index; ?>" class="action-btn">Delete</a>
+                        <button onclick="toggleSeeMore(<?php echo $index; ?>)" class="action-btn">See More</button>
+                        <button onclick="printRecord(<?php echo $index; ?>)" class="action-btn">Print</button>
                     </td>
                 </tr>
-                <tr id="expand-row-<?php echo $index; ?>" class="expandable-content">
+
+                <!-- Hidden Expanded Details -->
+                <tr id="expand-row-<?php echo $index; ?>" style="display: none;">
                     <td colspan="6">
-                        <div><strong>Address:</strong> <?php echo $record['address']; ?></div>
-                        <div><strong>Zip Code:</strong> <?php echo $record['zip_code']; ?></div>
-                        <div><strong>Gender:</strong> <?php echo $record['gender']; ?></div>
-                        <div><strong>Emergency Contact:</strong> <?php echo $record['emergency_contact']; ?></div>
+                        <table>
+                            <tr>
+                                <th>Address</th>
+                                <td><?php echo htmlspecialchars($record['address']); ?></td>
+                            </tr>
+                            <tr>
+                                <th>Zip Code</th>
+                                <td><?php echo htmlspecialchars($record['zip_code']); ?></td>
+                            </tr>
+                            <tr>
+                                <th>Gender</th>
+                                <td><?php echo htmlspecialchars($record['gender']); ?></td>
+                            </tr>
+                            <tr>
+                                <th>Emergency Contact</th>
+                                <td><?php echo htmlspecialchars($record['emergency_contact']); ?></td>
+                            </tr>
+                        </table>
                     </td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
 
-    <!-- Add Record Modal -->
+    <!-- Modal for Adding Record -->
     <div id="record-modal" class="modal">
         <div class="modal-content">
-            <h2>Add New Personnel Record</h2>
+            <h2>Add Personnel Record</h2>
             <form method="POST">
                 <input type="text" name="employee_name" placeholder="Employee Name" required>
                 <input type="text" name="job_title" placeholder="Job Title" required>
@@ -365,9 +395,8 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
                     <option value="">Select Department</option>
                     <option value="Logistics">Logistics</option>
                     <option value="Purchasing">Purchasing</option>
-                    <option value="Purchase Development">Purchase Development</option>
-                    <option value="Accounting">Accounting</option>
                     <option value="Sales">Sales</option>
+                    <option value="Accounting">Accounting</option>
                     <option value="Finance">Finance</option>
                 </select>
                 <input type="date" name="date_of_hire" placeholder="Date of Hire" required>
@@ -401,6 +430,72 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
         } else {
             row.style.display = 'none';
         }
+    }
+
+    // Print specific record
+    function printRecord(index) {
+        const record = <?php echo json_encode($_SESSION['personnel_records']); ?>[index];
+        const printWindow = window.open('', '', 'width=800,height=600');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+                        .print-container { width: 100%; padding: 20px; }
+                        .print-container table { width: 100%; border-collapse: collapse; }
+                        .print-container th, .print-container td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        .print-container th { background-color: #2e3a59; color: white; }
+                        .company-logo { width: 100px; height: auto; }
+                    </style>
+                </head>
+                <body>
+                    <div class="print-container">
+                        <img src="LOGO.png" alt="Company Logo" class="company-logo">
+                        <h1>Personnel Record</h1>
+                        <table>
+                            <tr>
+                                <th>Employee Name</th>
+                                <td>${record.employee_name}</td>
+                            </tr>
+                            <tr>
+                                <th>Job Title</th>
+                                <td>${record.job_title}</td>
+                            </tr>
+                            <tr>
+                                <th>Department</th>
+                                <td>${record.department}</td>
+                            </tr>
+                            <tr>
+                                <th>Date of Hire</th>
+                                <td>${record.date_of_hire}</td>
+                            </tr>
+                            <tr>
+                                <th>Status</th>
+                                <td>${record.status}</td>
+                            </tr>
+                            <tr>
+                                <th>Address</th>
+                                <td>${record.address}</td>
+                            </tr>
+                            <tr>
+                                <th>Zip Code</th>
+                                <td>${record.zip_code}</td>
+                            </tr>
+                            <tr>
+                                <th>Gender</th>
+                                <td>${record.gender}</td>
+                            </tr>
+                            <tr>
+                                <th>Emergency Contact</th>
+                                <td>${record.emergency_contact}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
     }
 </script>
 
