@@ -8,29 +8,42 @@ if (!isset($_SESSION['personnel_records'])) {
 
 // Handle record addition
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addRecord'])) {
+    // Retrieve all fields
     $employee_name = $_POST['employee_name'];
-    $job_title = $_POST['job_title'];
-    $department = $_POST['department'];
-    $date_of_hire = $_POST['date_of_hire'];
-    $status = $_POST['status'];
-
-    // New fields
+    $email = $_POST['email'];
+    $cell_phone = $_POST['cell_phone'];
     $address = $_POST['address'];
-    $zip_code = $_POST['zip_code'];
-    $gender = $_POST['gender'];
-    $emergency_contact = $_POST['emergency_contact'];
+    $birth_date = $_POST['birth_date'];
+    $marital_status = $_POST['marital_status'];
+    $emergency_contact_name = $_POST['emergency_contact_name'];
+    $emergency_contact_number = $_POST['emergency_contact_number'];
+    $job_title = $_POST['job_title'];
+    $employee_id = $_POST['employee_id'];
+    $start_date = $_POST['start_date'];
+    $department = $_POST['department'];
+    $salary = $_POST['salary'];
+    $work_location = $_POST['work_location'];
+    $supervisor = $_POST['supervisor'];
+    $status = $_POST['status'];
 
     // Add the new record to the session array
     $_SESSION['personnel_records'][] = [
         'employee_name' => $employee_name,
-        'job_title' => $job_title,
-        'department' => $department,
-        'date_of_hire' => $date_of_hire,
-        'status' => $status,
+        'email' => $email,
+        'cell_phone' => $cell_phone,
         'address' => $address,
-        'zip_code' => $zip_code,
-        'gender' => $gender,
-        'emergency_contact' => $emergency_contact,
+        'birth_date' => $birth_date,
+        'marital_status' => $marital_status,
+        'emergency_contact_name' => $emergency_contact_name,
+        'emergency_contact_number' => $emergency_contact_number,
+        'job_title' => $job_title,
+        'employee_id' => $employee_id,
+        'start_date' => $start_date,
+        'department' => $department,
+        'salary' => $salary,
+        'work_location' => $work_location,
+        'supervisor' => $supervisor,
+        'status' => $status,
     ];
 
     // Redirect to the same page to refresh the records list
@@ -40,10 +53,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addRecord'])) {
 
 // Handle record deletion
 if (isset($_GET['delete'])) {
-    $recordIndex = $_GET['delete'];
-    unset($_SESSION['personnel_records'][$recordIndex]);
-    $_SESSION['personnel_records'] = array_values($_SESSION['personnel_records']); // Re-index the array
-    header('Location: ' . $_SERVER['PHP_SELF']);
+    $recordIndex = (int)$_GET['delete']; // Ensure the index is an integer
+    if (isset($_SESSION['personnel_records'][$recordIndex])) {
+        unset($_SESSION['personnel_records'][$recordIndex]); // Remove the record
+        $_SESSION['personnel_records'] = array_values($_SESSION['personnel_records']); // Re-index the array
+    }
+    header('Location: ' . $_SERVER['PHP_SELF']); // Refresh the page
     exit;
 }
 
@@ -110,7 +125,7 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
         }
 
         .sidebar ul li {
-            padding: 18px 25px;
+            padding: 15px 20px;
             border-bottom: 1px solid #3e4a72;
             cursor: pointer;
             display: flex;
@@ -120,8 +135,21 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
         }
 
         .sidebar ul li:hover {
-            background-color: #fff;
+            background-color: #4a90e2;
             transform: translateX(5px);
+        }
+
+        .sidebar ul li a {
+            text-decoration: none;
+            color: white;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .sidebar ul li i {
+            margin-right: 15px;
         }
 
         .content {
@@ -145,7 +173,6 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             margin-left: 10px;
         }
 
-        /* Table for records */
         .record-table {
             width: 100%;
             margin-top: 20px;
@@ -188,7 +215,6 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             background-color: #357ab7;
         }
 
-        /* Add Record Button */
         .add-record-btn {
             padding: 15px 25px;
             background-color: #4a90e2;
@@ -204,7 +230,6 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             background-color: #357ab7;
         }
 
-        /* Modal Styling */
         .modal {
             display: none;
             position: fixed;
@@ -219,9 +244,11 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
 
         .modal-content {
             background-color: #fff;
-            padding: 30px;
+            padding: 20px;
             border-radius: 8px;
-            width: 400px;
+            width: 600px; /* Increased width for a more rectangular shape */
+            max-height: 80vh; /* Limit the height of the modal */
+            overflow-y: auto; /* Enable scrolling if content exceeds max height */
         }
 
         .modal input, .modal select, .modal button {
@@ -243,7 +270,22 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             background-color: #357ab7;
         }
 
-        /* Print Styling */
+        /* Dropdown Menu Styles */
+        .sidebar ul li .dropdown {
+            display: none; /* Initially hidden */
+            background-color: #3e4a72; /* Set the background color */
+            padding: 10px 0; /* Optional: Add some padding */
+            border-radius: 4px; /* Optional: Add rounded corners */
+        }
+
+        .sidebar ul li .dropdown li {
+            padding: 10px 20px; /* Padding for dropdown items */
+        }
+
+        .sidebar ul li .dropdown li a {
+            color: white; /* Set text color for dropdown items */
+        }
+
         @media print {
             body {
                 font-family: Arial, sans-serif;
@@ -265,7 +307,8 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
                 border-collapse: collapse;
             }
 
-            .print-container th, .print-container td {
+            .print-container th,
+            .print-container td {
                 border: 1px solid #ddd;
                 padding: 8px;
                 text-align: left;
@@ -295,14 +338,21 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
         <img src="LOGO.png" alt="Superpack Logo">
     </div>
     <ul>
-        <li><a href="#">Dashboard</a></li>
-        <li><a href="#">Payroll</a></li>
-        <li><a href="#">Employee Management</a></li>
-        <li><a href="personnel_records.php">Personnel Records</a></li>
-        <li><a href="#">Attendance</a></li>
-        <li><a href="#">Settings</a></li>
-        <li><a href="#">About Company</a></li>
-        <li><a href="#">Logout</a></li>
+        <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
+        <li class="menu-item">
+            <a href="javascript:void(0)" class="dropdown-toggle" onclick="toggleDropdown(this)"><i class="fas fa-users"></i> Employee Management <i class="fas fa-chevron-down arrow"></i></a>
+            <ul class="dropdown">
+                <li><a href="personnel.php"><i class="fas fa-id-badge"></i> Personnel Records</a></li>
+                <li><a href="leave.php"><i class="fas fa-plane"></i> Leave Request</a></li>
+                <li><a href="evaluation.php"><i class="fas fa-star"></i> Evaluation Form</a></li>
+            </ul>
+        </li>
+        <li><a href="task.php"><i class="fa-solid fa-font-awesome"></i> Task Management</a></li>
+        <li><a href="attendance.php"><i class="fa-solid fa-star"></i> Attendance</a></li>
+        <li><a href="settings.php"><i class="fas fa-cog"></i> Settings</a></li>
+        <li><a href="about.php"><i class="fas fa-building"></i> About Company</a></li>
+        <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
 </div>
 
@@ -314,7 +364,7 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
     <div class="filters">
         <button class="add-record-btn" onclick="document.getElementById('record-modal').style.display = 'flex';">Add New Record</button>
         <form method="POST" class="filters">
-            <input type="text" name="search" placeholder="Search employees" value="<?php echo $searchKeyword; ?>" />
+            <input type="text" name="search" placeholder="Search employees" value="<?php echo htmlspecialchars($searchKeyword); ?>" />
             <button type="submit">Search</button>
 
             <!-- Department Filter -->
@@ -335,6 +385,8 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
         <thead>
             <tr>
                 <th>Employee Name</th>
+                <th>Email</th>
+                <th>Cell Phone</th>
                 <th>Job Title</th>
                 <th>Department</th>
                 <th>Date of Hire</th>
@@ -346,12 +398,14 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             <?php foreach ($filtered_records as $index => $record): ?>
                 <tr>
                     <td><?php echo htmlspecialchars($record['employee_name']); ?></td>
+                    <td><?php echo htmlspecialchars($record['email']); ?></td>
+                    <td><?php echo htmlspecialchars($record['cell_phone']); ?></td>
                     <td><?php echo htmlspecialchars($record['job_title']); ?></td>
                     <td><?php echo htmlspecialchars($record['department']); ?></td>
-                    <td><?php echo htmlspecialchars($record['date_of_hire']); ?></td>
+                    <td><?php echo htmlspecialchars($record['start_date']); ?></td>
                     <td><?php echo htmlspecialchars($record['status']); ?></td>
                     <td>
-                        <a href="personnel_records.php?delete=<?php echo $index; ?>" class="action-btn">Delete</a>
+                        <a href="?delete=<?php echo $index; ?>" class="action-btn">Delete</a>
                         <button onclick="toggleSeeMore(<?php echo $index; ?>)" class="action-btn">See More</button>
                         <button onclick="printRecord(<?php echo $index; ?>)" class="action-btn">Print</button>
                     </td>
@@ -359,23 +413,39 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
 
                 <!-- Hidden Expanded Details -->
                 <tr id="expand-row-<?php echo $index; ?>" style="display: none;">
-                    <td colspan="6">
+                    <td colspan="8">
                         <table>
                             <tr>
                                 <th>Address</th>
                                 <td><?php echo htmlspecialchars($record['address']); ?></td>
                             </tr>
                             <tr>
-                                <th>Zip Code</th>
-                                <td><?php echo htmlspecialchars($record['zip_code']); ?></td>
+                                <th>Birth Date</th>
+                                <td><?php echo htmlspecialchars($record['birth_date']); ?></td>
                             </tr>
                             <tr>
-                                <th>Gender</th>
-                                <td><?php echo htmlspecialchars($record['gender']); ?></td>
+                                <th>Marital Status</th>
+                                <td><?php echo htmlspecialchars($record['marital_status']); ?></td>
                             </tr>
                             <tr>
-                                <th>Emergency Contact</th>
-                                <td><?php echo htmlspecialchars($record['emergency_contact']); ?></td>
+                                <th>Emergency Contact Name</th>
+                                <td><?php echo htmlspecialchars($record['emergency_contact_name']); ?></td>
+                            </tr>
+                            <tr>
+                                <th>Emergency Contact Number</th>
+                                <td><?php echo htmlspecialchars($record['emergency_contact_number']); ?></td>
+                            </tr>
+                            <tr>
+                                <th>Salary</th>
+                                <td><?php echo htmlspecialchars($record['salary']); ?></td>
+                            </tr>
+                            <tr>
+                                <th>Work Location</th>
+                                <td><?php echo htmlspecialchars($record['work_location']); ?></td>
+                            </tr>
+                            <tr>
+                                <th>Supervisor</th>
+                                <td><?php echo htmlspecialchars($record['supervisor']); ?></td>
                             </tr>
                         </table>
                     </td>
@@ -389,115 +459,163 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
         <div class="modal-content">
             <h2>Add Personnel Record</h2>
             <form method="POST">
+                <h3>Employee Information</h3>
+                <label for="employee_name">Employee Name:</label>
                 <input type="text" name="employee_name" placeholder="Employee Name" required>
-                <input type="text" name="job_title" placeholder="Job Title" required>
-                <select name="department" required>
-                    <option value="">Select Department</option>
-                    <option value="Logistics">Logistics</option>
-                    <option value="Purchasing">Purchasing</option>
-                    <option value="Sales">Sales</option>
-                    <option value="Accounting">Accounting</option>
-                    <option value="Finance">Finance</option>
+
+                <label for="email">Email:</label>
+                <input type="email" name="email" placeholder="E-mail" required>
+
+                <label for="cell_phone">Cell Phone:</label>
+                <input type="text" name="cell_phone" placeholder="Cell Phone" required>
+
+                <label for="address">Address:</label>
+                <input type="text" name="address" placeholder="Address" required>
+
+                <label for="birth_date">Birth Date:</label>
+                <input type="date" name="birth_date" required>
+
+                <label for="marital_status">Marital Status:</label>
+                <select name="marital_status" required>
+                    <option value="">Select Marital Status</option>
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Widowed">Widowed</option>
                 </select>
-                <input type="date" name="date_of_hire" placeholder="Date of Hire" required>
+
+                <h3>Emergency Contact</h3>
+                <label for="emergency_contact_name">Emergency Contact Name:</label>
+                <input type="text" name="emergency_contact_name" placeholder="Emergency Contact Name (Optional)">
+
+                <label for="emergency_contact_number">Emergency Contact Number:</label>
+                <input type="text" name="emergency_contact_number" placeholder="Emergency Contact Number (Optional)">
+
+                <h3>Work Information</h3>
+                <label for="job_title">Job Title:</label>
+                <input type="text" name="job_title" placeholder="Job Title" required>
+
+                <label for="department">Department:</label>
+                <input type="text" name="department" placeholder="Department" required>
+
+                <label for="start_date">Date of Hire:</label>
+                <input type="date" name="start_date" required>
+
+                <label for="salary">Salary:</label>
+                <input type="number" name="salary" placeholder="Salary" required>
+
+                <label for="work_location">Work Location:</label>
+                <input type="text" name="work_location" placeholder="Work Location" required>
+
+                <label for="supervisor">Supervisor:</label>
+                <input type="text" name="supervisor" placeholder="Supervisor" required>
+
+                <label for="status">Status:</label>
                 <select name="status" required>
                     <option value="">Select Status</option>
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
+                    <option value="On Leave">On Leave</option>
                 </select>
-                <!-- New Fields -->
-                <input type="text" name="address" placeholder="Address" required>
-                <input type="text" name="zip_code" placeholder="Zip Code" required>
-                <select name="gender" required>
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                </select>
-                <input type="text" name="emergency_contact" placeholder="Emergency Contact" required>
+
                 <button type="submit" name="addRecord">Add Record</button>
                 <button type="button" onclick="document.getElementById('record-modal').style.display = 'none';">Cancel</button>
             </form>
         </div>
     </div>
-</div>
 
-<script>
-    // Toggle the "See More" section
-    function toggleSeeMore(index) {
-        const row = document.getElementById('expand-row-' + index);
-        if (row.style.display === 'none') {
-            row.style.display = 'table-row';
-        } else {
-            row.style.display = 'none';
+    <script>
+        function toggleDropdown(element) {
+            const dropdown = element.nextElementSibling;
+            const allDropdowns = document.querySelectorAll('.dropdown');
+
+            // Close all other dropdowns
+            allDropdowns.forEach(function (d) {
+                if (d !== dropdown) {
+                    d.style.display = 'none';
+                }
+            });
+
+            // Toggle the clicked dropdown
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
         }
-    }
 
-    // Print specific record
-    function printRecord(index) {
-        const record = <?php echo json_encode($_SESSION['personnel_records']); ?>[index];
-        const printWindow = window.open('', '', 'width=800,height=600');
-        printWindow.document.write(`
-            <html>
-                <head>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-                        .print-container { width: 100%; padding: 20px; }
-                        .print-container table { width: 100%; border-collapse: collapse; }
-                        .print-container th, .print-container td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                        .print-container th { background-color: #2e3a59; color: white; }
-                        .company-logo { width: 100px; height: auto; }
-                    </style>
-                </head>
-                <body>
-                    <div class="print-container">
+        // Close dropdowns when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropdown-toggle')) {
+                const allDropdowns = document.querySelectorAll('.dropdown');
+                allDropdowns.forEach(function (d) {
+                    d.style.display = 'none';
+                });
+            }
+        };
+
+        function toggleSeeMore(index) {
+            const row = document.getElementById('expand-row-' + index);
+            row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+        }
+
+        function printRecord(index) {
+            const record = <?php echo json_encode($_SESSION['personnel_records']); ?>[index];
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Print Record</title>
+                        <style>
+                            body {
+                                font-family: Arial, sans-serif;
+                                margin: 20px;
+                            }
+                            table {
+                                width: 100%;
+                                border-collapse: collapse;
+                            }
+                            th, td {
+                                border: 1px solid #ddd;
+                                padding: 8px;
+                                text-align: left;
+                            }
+                            th {
+                                background-color: #2e3a59;
+                                color: white;
+                            }
+                            .company-logo {
+                                width: 100px;
+                                height: auto;
+                            }
+                        </style>
+                    </head>
+                    <body>
                         <img src="LOGO.png" alt="Company Logo" class="company-logo">
-                        <h1>Personnel Record</h1>
+                        <h2>Personnel Record</h2>
                         <table>
                             <tr>
-                                <th>Employee Name</th>
-                                <td>${record.employee_name}</td>
+                                <th>Field</th>
+                                <th>Value</th>
                             </tr>
-                            <tr>
-                                <th>Job Title</th>
-                                <td>${record.job_title}</td>
-                            </tr>
-                            <tr>
-                                <th>Department</th>
-                                <td>${record.department}</td>
-                            </tr>
-                            <tr>
-                                <th>Date of Hire</th>
-                                <td>${record.date_of_hire}</td>
-                            </tr>
-                            <tr>
-                                <th>Status</th>
-                                <td>${record.status}</td>
-                            </tr>
-                            <tr>
-                                <th>Address</th>
-                                <td>${record.address}</td>
-                            </tr>
-                            <tr>
-                                <th>Zip Code</th>
-                                <td>${record.zip_code}</td>
-                            </tr>
-                            <tr>
-                                <th>Gender</th>
-                                <td>${record.gender}</td>
-                            </tr>
-                            <tr>
-                                <th>Emergency Contact</th>
-                                <td>${record.emergency_contact}</td>
-                            </tr>
+                            <tr><td>Employee Name</td><td>${record.employee_name}</td></tr>
+                            <tr><td>Email</td><td>${record.email}</td></tr>
+                            <tr><td>Cell Phone</td><td>${record.cell_phone}</td></tr>
+                            <tr><td>Job Title</td><td>${record.job_title}</td></tr>
+                            <tr><td>Department</td><td>${record.department}</td></tr>
+                            <tr><td>Date of Hire</td><td>${record.start_date}</td></tr>
+                            <tr><td>Status</td><td>${record.status}</td></tr>
+                            <tr><td>Address</td><td>${record.address}</td></tr>
+                            <tr><td>Birth Date</td><td>${record.birth_date}</td></tr>
+                            <tr><td>Marital Status</td><td>${record.marital_status}</td></tr>
+                            <tr><td>Emergency Contact Name</td><td>${record.emergency_contact_name}</td></tr>
+                            <tr><td>Emergency Contact Number</td><td>${record.emergency_contact_number}</td></tr>
+                            <tr><td>Salary</td><td>${record.salary}</td></tr>
+                            <tr><td>Work Location</td><td>${record.work_location}</td></tr>
+                            <tr><td>Supervisor</td><td>${record.supervisor}</td></tr>
                         </table>
-                    </div>
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-    }
-</script>
-
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+    </script>
 </body>
 </html>
