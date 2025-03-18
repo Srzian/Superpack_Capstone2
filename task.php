@@ -47,6 +47,25 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
+// Handle task editing
+if (isset($_POST['editTask'])) {
+    $taskIndex = $_POST['task_index'];
+    $completion = $_POST['completion'];
+    $status = $_POST['status'];
+    $priority = $_POST['priority'];
+
+    // Update the task in the session
+    if (isset($_SESSION['tasks'][$taskIndex])) {
+        $_SESSION['tasks'][$taskIndex]['completion'] = $completion;
+        $_SESSION['tasks'][$taskIndex]['status'] = $status;
+        $_SESSION['tasks'][$taskIndex]['priority'] = $priority;
+    }
+
+    // Redirect to the same page to refresh the task list
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
+}
+
 // Filter tasks by search keyword
 $searchKeyword = isset($_POST['search']) ? $_POST['search'] : '';
 $departmentFilter = isset($_POST['department_filter']) ? $_POST['department_filter'] : '';
@@ -84,7 +103,7 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
 
         .sidebar {
             width: 250px;
-            background-color:#2e3a59;
+            background-color: #2e3a59; /* Sleek dark blue */
             color: white;
             height: 100vh;
             position: fixed;
@@ -105,13 +124,13 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
             height: auto;
         }
 
-        .sidebar ul {
+        . sidebar ul {
             list-style: none;
             padding: 0;
         }
 
         .sidebar ul li {
-            padding: 18px 25px;
+            padding: 15px 20px;
             border-bottom: 1px solid #3e4a72;
             cursor: pointer;
             display: flex;
@@ -121,8 +140,51 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
         }
 
         .sidebar ul li:hover {
-            background-color: #fff;
+            background-color: #4a90e2;
             transform: translateX(5px);
+        }
+
+        .sidebar ul li a {
+            text-decoration: none;
+            color: white;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .sidebar ul li i {
+            margin-right: 15px;
+        }
+
+        .sidebar .dropdown {
+            display: none;
+            flex-direction: column;
+            padding-left: 20px;
+            background-color: #364f6b;
+        }
+
+        .sidebar .dropdown.open {
+            display: flex;
+        }
+
+        .sidebar .dropdown li {
+            padding: 12px 20px;
+            font-size: 15px;
+            border-bottom: 1px solid #3e4a72;
+            border-radius: 4px;
+        }
+
+        .sidebar .dropdown li:hover {
+            background-color: #4a90e2;
+        }
+
+        .sidebar ul li .arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .rotate {
+            transform: rotate(180deg);
         }
 
         .content {
@@ -132,7 +194,6 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
             transition: margin-left 0.3s ease;
         }
 
-        /* Modal Styling */
         .modal {
             display: none;
             position: fixed;
@@ -174,7 +235,6 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
             background-color: #357ab7;
         }
 
-        /* Task Table and Filter */
         .filters {
             display: flex;
             justify-content: space-between;
@@ -229,7 +289,6 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
             background-color: #357ab7;
         }
 
-        /* Add Task Button */
         .add-task-btn {
             padding: 15px 25px;
             background-color: #4a90e2;
@@ -238,16 +297,11 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition : background-color 0.3s ease;
         }
 
         .add-task-btn:hover {
             background-color: #357ab7;
-        }
-
-        /* Task Form Styling */
-        .modal input, .modal select {
-            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -259,14 +313,21 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
         <img src="LOGO.png" alt="Superpack Logo">
     </div>
     <ul>
-        <li><a href="#">Dashboard</a></li>
-        <li><a href="#">Payroll</a></li>
-        <li><a href="#">Employee Management</a></li>
-        <li><a href="task_management.php">Task Management</a></li>
-        <li><a href="#">Attendance</a></li>
-        <li><a href="#">Settings</a></li>
-        <li><a href="#">About Company</a></li>
-        <li><a href="#">Logout</a></li>
+        <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
+        <li class="menu-item">
+            <a href="javascript:void(0)" class="dropdown-toggle" onclick="toggleDropdown(this)"><i class="fas fa-users"></i> Employee Management <i class="fas fa-chevron-down arrow"></i></a>
+            <ul class="dropdown">
+                <li><a href="personnel.php"><i class="fas fa-id-badge"></i> Personnel Records</a></li>
+                <li><a href="leave.php"><i class="fas fa-plane"></i> Leave Request</a></li>
+                <li><a href="evaluation.php"><i class="fas fa-star"></i> Evaluation Form</a></li>
+            </ul>
+        </li>
+        <li><a href="task.php"><i class="fa-solid fa-font-awesome"></i> Task Management</a></li>
+        <li><a href="attendance.php"><i class="fa-solid fa-star"></i> Attendance</a></li>
+        <li><a href="settings.php"><i class="fas fa-cog"></i> Settings</a></li>
+        <li><a href="about.php"><i class="fas fa-building"></i> About Company</a></li>
+        <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
 </div>
 
@@ -296,7 +357,7 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
         </form>
     </div>
 
-    <!-- Modal (Pop-up) for Adding New Task -->
+    <!-- Modal for Adding New Task -->
     <div id="task-modal" class="modal">
         <div class="modal-content">
             <h2>Add Task</h2>
@@ -313,8 +374,7 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
                 <label for="due_date">Due Date:</label>
                 <input type="date" id="due_date" name="due_date" required><br>
 
-                <label for="completion">Completion %:</label>
-                <input type="number" id="completion" name="completion" min="0" max="100" required><br>
+                <label for="completion">Completion %:</label <input type="number" id="completion" name="completion" min="0" max="100" required><br>
 
                 <label for="status">Status:</label>
                 <select name="status" id="status" required>
@@ -342,6 +402,35 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
 
                 <button type="submit" name="addTask">Add Task</button>
                 <button type="button" onclick="document.getElementById('task-modal').style.display = 'none';">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Editing Task -->
+    <div id="edit-task-modal" class="modal">
+        <div class="modal-content">
+            <h2>Edit Task</h2>
+            <form method="POST" id="edit-task-form">
+                <input type="hidden" name="task_index" id="task_index">
+                <label for="edit_completion">Completion %:</label>
+                <input type="number" id="edit_completion" name="completion" min="0" max="100" required><br>
+
+                <label for="edit_status">Status:</label>
+                <select name="status" id="edit_status" required>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Pending">Pending</option>
+                </select><br>
+
+                <label for="edit_priority">Priority:</label>
+                <select name="priority" id="edit_priority" required>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                </select><br>
+
+                <button type="submit" name="editTask">Update Task</button>
+                <button type="button" onclick="document.getElementById('edit-task-modal').style.display = 'none';">Cancel</button>
             </form>
         </div>
     </div>
@@ -376,6 +465,7 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
                     <td><?php echo $task['duration']; ?> days</td>
                     <td>
                         <a href="?delete=<?php echo $index; ?>" class="action-btn">Delete</a>
+                        <button type="button" class="action-btn" onclick="openEditModal(<?php echo $index; ?>, '<?php echo htmlspecialchars($task['completion']); ?>', '<?php echo htmlspecialchars($task['status']); ?>', '<?php echo htmlspecialchars($task['priority']); ?>')">Edit</button>
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -383,5 +473,23 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
     </table>
 </div>
 
+<script>
+    function openEditModal(index, completion, status, priority) {
+        document.getElementById('task_index').value = index;
+        document.getElementById('edit_completion').value = completion;
+        document.getElementById('edit_status').value = status;
+        document.getElementById('edit_priority').value = priority;
+        document.getElementById('edit-task-modal').style.display = 'flex';
+    }
+
+    function toggleDropdown(element) {
+        const dropdown = element.nextElementSibling;
+        dropdown.classList.toggle('open');
+        const arrow = element.querySelector('.arrow');
+        arrow.classList.toggle('rotate');
+    }
+</script>
+
 </body>
-</html>
+</html> 
+
