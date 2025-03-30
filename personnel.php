@@ -1,13 +1,26 @@
 <?php
 session_start();
 
-// Initialize personnel records in session if not already set
-if (!isset($_SESSION['personnel_records'])) {
-    $_SESSION['personnel_records'] = [];
+// Database connection
+$servername = "127.0.0.1";
+$username = "root"; // Default username for XAMPP
+$password = ""; // Default password for XAMPP (usually empty)
+$dbname = "personnel_management"; // Ensure this matches your actual database name
+
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 
 // Handle record addition
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addRecord'])) {
+    // Prepare and bind
+    $stmt = $conn->prepare("INSERT INTO personnel (employee_name, email, cell_phone, address, birth_date, marital_status, emergency_contact_name, emergency_contact_number, job_title, employee_id, start_date, department, salary, work_location, supervisor, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssssssssssssss", $employee_name, $email, $cell_phone, $address, $birth_date, $marital_status, $emergency_contact_name, $emergency_contact_number, $job_title, $employee_id, $start_date, $department, $salary, $work_location, $supervisor, $status);
+
     // Retrieve all fields
     $employee_name = $_POST['employee_name'];
     $email = $_POST['email'];
@@ -18,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addRecord'])) {
     $emergency_contact_name = $_POST['emergency_contact_name'];
     $emergency_contact_number = $_POST['emergency_contact_number'];
     $job_title = $_POST['job_title'];
-    $employee_id = $_POST['employee_id'];
+    $employee_id = $_POST['employee_id']; // Added employee_id
     $start_date = $_POST['start_date'];
     $department = $_POST['department'];
     $salary = $_POST['salary'];
@@ -26,25 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addRecord'])) {
     $supervisor = $_POST['supervisor'];
     $status = $_POST['status'];
 
-    // Add the new record to the session array
-    $_SESSION['personnel_records'][] = [
-        'employee_name' => $employee_name,
-        'email' => $email,
-        'cell_phone' => $cell_phone,
-        'address' => $address,
-        'birth_date' => $birth_date,
-        'marital_status' => $marital_status,
-        'emergency_contact_name' => $emergency_contact_name,
-        'emergency_contact_number' => $emergency_contact_number,
-        'job_title' => $job_title,
-        'employee_id' => $employee_id,
-        'start_date' => $start_date,
-        'department' => $department,
-        'salary' => $salary,
-        'work_location' => $work_location,
-        'supervisor' => $supervisor,
-        'status' => $status,
-    ];
+    // Execute the statement
+    $stmt->execute();
+    $stmt->close();
 
     // Redirect to the same page to refresh the records list
     header('Location: ' . $_SERVER['PHP_SELF']);
@@ -53,11 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addRecord'])) {
 
 // Handle record deletion
 if (isset($_GET['delete'])) {
-    $recordIndex = (int)$_GET['delete']; // Ensure the index is an integer
-    if (isset($_SESSION['personnel_records'][$recordIndex])) {
-        unset($_SESSION['personnel_records'][$recordIndex]); // Remove the record
-        $_SESSION['personnel_records'] = array_values($_SESSION['personnel_records']); // Re-index the array
-    }
+    $recordId = (int)$_GET['delete']; // Ensure the index is an integer
+    $stmt = $conn->prepare("DELETE FROM personnel WHERE id = ?");
+    $stmt->bind_param("i", $recordId);
+    $stmt->execute();
+    $stmt->close();
     header('Location: ' . $_SERVER['PHP_SELF']); // Refresh the page
     exit;
 }
@@ -66,12 +63,16 @@ if (isset($_GET['delete'])) {
 $searchKeyword = isset($_POST['search']) ? $_POST['search'] : '';
 $departmentFilter = isset($_POST['department_filter']) ? $_POST['department_filter'] : '';
 
-// Filter records based on search and department
-$filtered_records = array_filter($_SESSION['personnel_records'], function ($record) use ($searchKeyword, $departmentFilter) {
-    $matchesSearch = !$searchKeyword || stripos($record['employee_name'], $searchKeyword) !== false;
-    $matchesDepartment = !$departmentFilter || $record['department'] === $departmentFilter;
-    return $matchesSearch && $matchesDepartment;
-});
+// Prepare the SQL query with filters
+$sql = "SELECT * FROM personnel WHERE 1=1";
+if ($searchKeyword) {
+    $sql .= " AND employee_name LIKE '%" . $conn->real_escape_string($searchKeyword) . "%'";
+}
+if ($departmentFilter) {
+    $sql .= " AND department = '" . $conn->real_escape_string($departmentFilter) . "'";
+}
+
+$result = $conn->query($sql);
 ?>
 
 <!DOCTYPE html>
@@ -375,7 +376,7 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
                 <option value="Purchase Development" <?php echo ($departmentFilter == 'Purchase Development') ? 'selected' : ''; ?>>Purchase Development</option>
                 <option value="Accounting" <?php echo ($departmentFilter == 'Accounting') ? 'selected' : ''; ?>>Accounting</option>
                 <option value="Sales" <?php echo ($departmentFilter == 'Sales') ? 'selected' : ''; ?>>Sales</option>
-                <option value="Finance" <?php echo ($departmentFilter == 'Finance') ? 'selected' : ''; ?>>Finance</option>
+                <option value="Warehouse" <?php echo ($departmentFilter == 'Warehouse') ? 'selected' : ''; ?>>Warehouse</option>
             </select>
         </form>
     </div>
@@ -395,62 +396,66 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($filtered_records as $index => $record): ?>
+            <?php if ($result->num_rows > 0): ?>
+                <?php while ($record = $result->fetch_assoc()): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($record['employee_name']); ?></td>
+                        <td><?php echo htmlspecialchars($record['email']); ?></td>
+                        <td><?php echo htmlspecialchars($record['cell_phone']); ?></td>
+                        <td><?php echo htmlspecialchars($record['job_title']); ?></td>
+                        <td><?php echo htmlspecialchars($record['department']); ?></td>
+                        <td><?php echo htmlspecialchars($record['start_date']); ?></td>
+                        <td><?php echo htmlspecialchars($record['status']); ?></td>
+                        <td>
+                            <a href="?delete=<?php echo $record['id']; ?>" class="action-btn">Delete</a>
+                            <button onclick="toggleSeeMore(<?php echo $record['id']; ?>)" class="action-btn">See More</button>
+                            <button onclick="printRecord(<?php echo htmlspecialchars(json_encode($record)); ?>)" class="action-btn">Print</button>
+                        </td>
+                    </tr>
+                    <tr id="expand-row-<?php echo $record['id']; ?>" style="display: none;">
+                        <td colspan="8">
+                            <table style="width: 100%;">
+                                <tr>
+                                    <th>Address</th>
+                                    <td><?php echo htmlspecialchars($record['address']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Birth Date</th>
+                                    <td><?php echo htmlspecialchars($record['birth_date']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Marital Status</th>
+                                    <td><?php echo htmlspecialchars($record['marital_status']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Emergency Contact Name</th>
+                                    <td><?php echo htmlspecialchars($record['emergency_contact_name']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Emergency Contact Number</th>
+                                    <td><?php echo htmlspecialchars($record['emergency_contact_number']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Salary</th>
+                                    <td><?php echo htmlspecialchars($record['salary']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Work Location</th>
+                                    <td><?php echo htmlspecialchars($record['work_location']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Supervisor</th>
+                                    <td><?php echo htmlspecialchars($record['supervisor']); ?></td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
                 <tr>
-                    <td><?php echo htmlspecialchars($record['employee_name']); ?></td>
-                    <td><?php echo htmlspecialchars($record['email']); ?></td>
-                    <td><?php echo htmlspecialchars($record['cell_phone']); ?></td>
-                    <td><?php echo htmlspecialchars($record['job_title']); ?></td>
-                    <td><?php echo htmlspecialchars($record['department']); ?></td>
-                    <td><?php echo htmlspecialchars($record['start_date']); ?></td>
-                    <td><?php echo htmlspecialchars($record['status']); ?></td>
-                    <td>
-                        <a href="?delete=<?php echo $index; ?>" class="action-btn">Delete</a>
-                        <button onclick="toggleSeeMore(<?php echo $index; ?>)" class="action-btn">See More</button>
-                        <button onclick="printRecord(<?php echo $index; ?>)" class="action-btn">Print</button>
-                    </td>
+                    <td colspan="8">No records found.</td>
                 </tr>
-
-                <!-- Hidden Expanded Details -->
-                <tr id="expand-row-<?php echo $index; ?>" style="display: none;">
-                    <td colspan="8">
-                        <table>
-                            <tr>
-                                <th>Address</th>
-                                <td><?php echo htmlspecialchars($record['address']); ?></td>
-                            </tr>
-                            <tr>
-                                <th>Birth Date</th>
-                                <td><?php echo htmlspecialchars($record['birth_date']); ?></td>
-                            </tr>
-                            <tr>
-                                <th>Marital Status</th>
-                                <td><?php echo htmlspecialchars($record['marital_status']); ?></td>
-                            </tr>
-                            <tr>
-                                <th>Emergency Contact Name</th>
-                                <td><?php echo htmlspecialchars($record['emergency_contact_name']); ?></td>
-                            </tr>
-                            <tr>
-                                <th>Emergency Contact Number</th>
-                                <td><?php echo htmlspecialchars($record['emergency_contact_number']); ?></td>
-                            </tr>
-                            <tr>
-                                <th>Salary</th>
-                                <td><?php echo htmlspecialchars($record['salary']); ?></td>
-                            </tr>
-                            <tr>
-                                <th>Work Location</th>
-                                <td><?php echo htmlspecialchars($record['work_location']); ?></td>
-                            </tr>
-                            <tr>
-                                <th>Supervisor</th>
-                                <td><?php echo htmlspecialchars($record['supervisor']); ?></td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
+            <?php endif; ?>
         </tbody>
     </table>
 
@@ -460,6 +465,9 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             <h2>Add Personnel Record</h2>
             <form method="POST">
                 <h3>Employee Information</h3>
+                <label for="employee_id">Employee ID:</label>
+                <input type="text" name="employee_id" placeholder="Employee ID" required> <!-- Added Employee ID field -->
+
                 <label for="employee_name">Employee Name:</label>
                 <input type="text" name="employee_name" placeholder="Employee Name" required>
 
@@ -496,7 +504,14 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
                 <input type="text" name="job_title" placeholder="Job Title" required>
 
                 <label for="department">Department:</label>
-                <input type="text" name="department" placeholder="Department" required>
+                <select name="department" required>
+                    <option value="">Select Department</option>
+                    <option value="Logistics">Logistics</option>
+                    <option value="Accounting">Accounting</option>
+                    <option value="Warehouse">Warehouse</option>
+                    <option value="Sales">Sales</option>
+                    <option value="Purchasing Development">Purchasing Development</option>
+                </select>
 
                 <label for="start_date">Date of Hire:</label>
                 <input type="date" name="start_date" required>
@@ -555,8 +570,7 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
             row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
         }
 
-        function printRecord(index) {
-            const record = <?php echo json_encode($_SESSION['personnel_records']); ?>[index];
+        function printRecord(record) {
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
                 <html>
@@ -594,6 +608,7 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
                                 <th>Field</th>
                                 <th>Value</th>
                             </tr>
+                            <tr><td>Employee ID</td><td>${record.employee_id}</td></tr>
                             <tr><td>Employee Name</td><td>${record.employee_name}</td></tr>
                             <tr><td>Email</td><td>${record.email}</td></tr>
                             <tr><td>Cell Phone</td><td>${record.cell_phone}</td></tr>
@@ -619,3 +634,7 @@ $filtered_records = array_filter($_SESSION['personnel_records'], function ($reco
     </script>
 </body>
 </html>
+
+<?php
+$conn->close(); // Close the database connection
+?>
