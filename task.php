@@ -6,32 +6,40 @@ if (!isset($_SESSION['tasks'])) {
     $_SESSION['tasks'] = [];
 }
 
+// Initialize the search keyword variable
+$searchKeyword = ''; // Initialize the search keyword variable
+$departmentFilter = ''; // Initialize the department filter variable
+
+// Database connection parameters
+$host = 'localhost';
+$username = 'root'; // Default username for XAMPP
+$password = ''; // Default password for XAMPP (usually empty)
+$database = 'task_management'; // Your database name
+
+// Create a connection
+$conn = new mysqli($host, $username, $password, $database);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
 // Handle task addition
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addTask'])) {
     $task = $_POST['task'];
-    $employee_name = isset($_POST['employee_name']) ? $_POST['employee_name'] : '';
+    $employee_name = $_POST['employee_name'] ?? '';
     $start_date = $_POST['start_date'];
     $due_date = $_POST['due_date'];
     $completion = $_POST['completion'];
     $status = $_POST['status'];
     $priority = $_POST['priority'];
     $department = $_POST['department'];
-    
-    // Calculate the task duration
-    $duration = (strtotime($due_date) - strtotime($start_date)) / (60 * 60 * 24); // in days
 
-    // Add the new task to the session array
-    $_SESSION['tasks'][] = [
-        'task' => $task,
-        'employee_name' => $employee_name,
-        'start_date' => $start_date,
-        'due_date' => $due_date,
-        'completion' => $completion,
-        'status' => $status,
-        'priority' => $priority,
-        'department' => $department,
-        'duration' => $duration
-    ];
+    // Insert the new task into the database
+    $stmt = $conn->prepare("INSERT INTO tasks (task, employee_name, start_date, due_date, completion, status, priority, department) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssisss", $task, $employee_name, $start_date, $due_date, $completion, $status, $priority, $department);
+    $stmt->execute();
+    $stmt->close();
 
     // Redirect to the same page to refresh the task list
     header('Location: ' . $_SERVER['PHP_SELF']);
@@ -40,38 +48,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addTask'])) {
 
 // Handle task deletion
 if (isset($_GET['delete'])) {
-    $taskIndex = $_GET['delete'];
-    unset($_SESSION['tasks'][$taskIndex]);
-    $_SESSION['tasks'] = array_values($_SESSION['tasks']); // Re-index the array
+    $taskId = $_GET['delete'];
+    $stmt = $conn->prepare("DELETE FROM tasks WHERE id = ?");
+    $stmt->bind_param("i", $taskId);
+    $stmt->execute();
+    $stmt->close();
+
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
 
 // Handle task editing
 if (isset($_POST['editTask'])) {
-    $taskIndex = $_POST['task_index'];
+    $taskId = $_POST['task_index'];
     $completion = $_POST['completion'];
     $status = $_POST['status'];
     $priority = $_POST['priority'];
 
-    // Update the task in the session
-    if (isset($_SESSION['tasks'][$taskIndex])) {
-        $_SESSION['tasks'][$taskIndex]['completion'] = $completion;
-        $_SESSION['tasks'][$taskIndex]['status'] = $status;
-        $_SESSION['tasks'][$taskIndex]['priority'] = $priority;
-    }
+    // Update the task in the database
+    $stmt = $conn->prepare("UPDATE tasks SET completion = ?, status = ?, priority = ? WHERE id = ?");
+    $stmt->bind_param("sssi", $completion, $status, $priority, $taskId);
+    $stmt->execute();
+    $stmt->close();
 
-    // Redirect to the same page to refresh the task list
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
+
+// Fetch tasks from the database
+$result = $conn->query("SELECT * FROM tasks");
+$tasks = $result->fetch_all(MYSQLI_ASSOC);
 
 // Filter tasks by search keyword
 $searchKeyword = isset($_POST['search']) ? $_POST['search'] : '';
 $departmentFilter = isset($_POST['department_filter']) ? $_POST['department_filter'] : '';
 
 // Filter tasks based on search and department
-$filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($searchKeyword, $departmentFilter) {
+$filtered_tasks = array_filter($tasks, function ($task) use ($searchKeyword, $departmentFilter) {
     $matchesSearch = !$searchKeyword || stripos($task['task'], $searchKeyword) !== false;
     $matchesDepartment = !$departmentFilter || $task['department'] === $departmentFilter;
     return $matchesSearch && $matchesDepartment;
@@ -124,7 +137,7 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
             height: auto;
         }
 
-        . sidebar ul {
+        .sidebar ul {
             list-style: none;
             padding: 0;
         }
@@ -297,7 +310,7 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            transition : background-color 0.3s ease;
+            transition: background-color 0.3s ease;
         }
 
         .add-task-btn:hover {
@@ -316,7 +329,7 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
         <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
         <li><a href="payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
         <li class="menu-item">
-            <a href="javascript:void(0)" class="dropdown-toggle" onclick="toggleDropdown(this)"><i class="fas fa-users"></i> Employee Management <i class="fas fa-chevron-down arrow"></i></a>
+            <a href="javascript:void( 0)" class="dropdown-toggle" onclick="toggleDropdown(this)"><i class="fas fa-users"></i> Employee Management <i class="fas fa-chevron-down arrow"></i></a>
             <ul class="dropdown">
                 <li><a href="personnel.php"><i class="fas fa-id-badge"></i> Personnel Records</a></li>
                 <li><a href="leave.php"><i class="fas fa-plane"></i> Leave Request</a></li>
@@ -339,7 +352,7 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
     <div class="filters">
         <button class="add-task-btn" onclick="document.getElementById('task-modal').style.display = 'flex';">Add New Task</button>
         <form method="POST" class="filters">
-            <input type="text" name="search" placeholder="Search tasks" value="<?php echo $searchKeyword; ?>" />
+            <input type="text" name="search" placeholder="Search tasks" value="<?php echo htmlspecialchars($searchKeyword); ?>" />
             <button type="submit">Search</button>
 
             <!-- Department Filter -->
@@ -374,7 +387,8 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
                 <label for="due_date">Due Date:</label>
                 <input type="date" id="due_date" name="due_date" required><br>
 
-                <label for="completion">Completion %:</label <input type="number" id="completion" name="completion" min="0" max="100" required><br>
+                <label for="completion">Completion %:</label>
+                <input type="number" id="completion" name="completion" min="0" max="100" required><br>
 
                 <label for="status">Status:</label>
                 <select name="status" id="status" required>
@@ -387,7 +401,7 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
                 <select name="priority" id="priority" required>
                     <option value="High">High</option>
                     <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
+                    <option value="Low"> Low</option>
                 </select><br>
 
                 <label for="department">Department:</label>
@@ -447,12 +461,11 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
                 <th>Status</th>
                 <th>Priority</th>
                 <th>Department</th>
-                <th>Duration (Days)</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($filtered_tasks as $index => $task): ?>
+            <?php foreach ($tasks as $task): ?>
                 <tr>
                     <td><?php echo htmlspecialchars($task['task']); ?></td>
                     <td><?php echo htmlspecialchars($task['employee_name']); ?></td>
@@ -462,10 +475,9 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
                     <td><?php echo htmlspecialchars($task['status']); ?></td>
                     <td><?php echo htmlspecialchars($task['priority']); ?></td>
                     <td><?php echo htmlspecialchars($task['department']); ?></td>
-                    <td><?php echo $task['duration']; ?> days</td>
                     <td>
-                        <a href="?delete=<?php echo $index; ?>" class="action-btn">Delete</a>
-                        <button type="button" class="action-btn" onclick="openEditModal(<?php echo $index; ?>, '<?php echo htmlspecialchars($task['completion']); ?>', '<?php echo htmlspecialchars($task['status']); ?>', '<?php echo htmlspecialchars($task['priority']); ?>')">Edit</button>
+                        <a href="?delete=<?php echo $task['id']; ?>" class="action-btn">Delete</a>
+                        <button type="button" class="action-btn" onclick="openEditModal(<?php echo $task['id']; ?>, '<?php echo htmlspecialchars($task['completion']); ?>', '<?php echo htmlspecialchars($task['status']); ?>', '<?php echo htmlspecialchars($task['priority']); ?>')">Edit</button>
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -474,8 +486,8 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
 </div>
 
 <script>
-    function openEditModal(index, completion, status, priority) {
-        document.getElementById('task_index').value = index;
+    function openEditModal(id, completion, status, priority) {
+        document.getElementById('task_index').value = id;
         document.getElementById('edit_completion').value = completion;
         document.getElementById('edit_status').value = status;
         document.getElementById('edit_priority').value = priority;
@@ -491,5 +503,4 @@ $filtered_tasks = array_filter($_SESSION['tasks'], function ($task) use ($search
 </script>
 
 </body>
-</html> 
-
+</html>
