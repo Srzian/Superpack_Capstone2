@@ -1,59 +1,7 @@
-<?php
-/* session_start(); // Starting session
+<?php 
 
- // Check if the request method is POST
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+session_start(); 
 
-    // Retrieve email from POST data
-    $email = $_POST["email"];
-    // Retrieve password from POST data
-    $password = $_POST["password"];
-
-    try {
-        // Include the database connection file
-        require_once("database.php");
-
-        // Define SQL query to fetch user from 'users' table
-        $query = "SELECT * FROM users WHERE email = ? AND password = ?";
-        // Prepare SQL statement
-        $stmt = $pdo->prepare($query);
-
-        // Bind parameters
-        $stmt->bindParam(1, $email);
-        $stmt->bindParam(2, $password);
-
-        // Execute statement
-        $stmt->execute();
-
-        // Fetch user
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        // Check if user exists
-        if ($user) {
-            // User authenticated, set session and redirect
-            $_SESSION["email"] = $email;
-            header("Location: dashboard.php"); // Redirect to dashboard.php
-            exit(); // Terminate script execution after redirection
-        } else {
-            // Invalid credentials, redirect back to the login page
-            header("Location: login.php"); // Redirect back to login.php
-            exit(); // Terminate script execution after redirection
-        }
-
-        // Close statement
-        $stmt = null;
-
-        // Close database connection
-        $pdo = null;
-
-        // Terminate script execution
-        die();
-    } catch (PDOException $e) {
-        // Handle PDOException and display error message
-        die("Query Error: " . $e->getMessage());
-    }
-}
-    */
 ?>
 
 <!DOCTYPE html>
@@ -62,386 +10,315 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HR & Management System</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-  </head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    body {
-      background-color:rgba(47, 48, 50, 0.18);
-      font-family: Arial, sans-serif;
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
+    }
+    
+    body {
+      background-color: rgba(47, 48, 50, 0.18);
+      font-family: Arial, sans-serif;
+      overflow-x: hidden;
     }
 
     .container {
       display: flex;
       min-height: 100vh;
-      position: relative;
-      overflow: hidden;
+      width: 100%;
+      flex-direction: column;
     }
 
-    .right-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: left;
-            margin-left: 64px;
-            
-    }
-
-    .bottom-container {
-            background-color: #64A651;
-            font-size: 24px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: bold;
-            border-radius: 10px;
-            color: #ffffff;
-            padding-left: 24px;
-            padding-top: 1px;
-            padding-bottom: 1px;
-            position:fixed;
-            bottom: 0;
-            display: none;
-            z-index: 1000;
+    /* Tablet and desktop layout */
+    @media (min-width: 768px) {
+      .container {
+        flex-direction: row;
+      }
     }
 
     .company-info,
     .container-all {
-      flex: 1;
+      width: 100%;
+      padding: 1.5rem;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 40px;
-      color:rgb(250, 253, 252);
     }
 
     .company-info {
-      background-color: rgb(252, 254, 254); /* Set background color with opacity */
-      border-bottom-right-radius: 20px;
-      border-top-right-radius: 20px;
-      display: flex;
-      align-items: center;
-      padding: 40px;
+      background-color: rgb(252, 254, 254);
+      padding: 2rem 1rem;
+    }
+
+    @media (min-width: 768px) {
+      .company-info {
+        flex: 1;
+        border-bottom-right-radius: 20px;
+        border-top-right-radius: 20px;
+      }
+      
+      .container-all {
+        flex: 1;
+      }
     }
 
     .company-info h2 {
-      font-size: 48px; /* Increase the font size */
+      font-size: 2rem;
       font-weight: bold;
-      margin-bottom: 5px;
-      margin-top: 1px;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); /* Add text shadow */
-      color: #28a745; /* Set text color to green */
+      margin-bottom: 0.5rem;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      color: #28a745;
+      text-align: center;
     }
 
     .company-info p {
-      font-size: 25px; /* Increase the font size */
-      margin-bottom: 20px;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
       line-height: 1.6;
-      color: #218838; /* Set text color to green */
+      color: #218838;
+      text-align: center;
+    }
+
+    .logo {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin: 1rem 0;
     }
 
     .company-info .logo img {
-      width: 600px; /* Increase the width of the logo */
+      width: 100%;
+      max-width: 280px;
       height: auto;
-      margin-right: 20px; /* Add margin to separate logo from text */
     }
 
-    button {
-            padding: 1px 15px;
-            margin-top: 10px;
-            font-size: 10px;
-            cursor: pointer;
-        }
+    /* Adjust sizes for larger screens */
+    @media (min-width: 768px) {
+      .company-info h2 {
+        font-size: 2.5rem;
+      }
+      
+      .company-info p {
+        font-size: 1.5rem;
+      }
+      
+      .company-info .logo img {
+        max-width: 350px;
+      }
+    }
 
-        #capture-button {
-            background-color: #64A651;
-            color: #131313;
-            border: 2px solid #131313;;
-            border-radius: 1px;
-            
-            margin-top: 2px;
-            font-size: 15px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: bold;
-        }
+    @media (min-width: 1024px) {
+      .company-info h2 {
+        font-size: 3rem;
+      }
+      
+      .company-info .logo img {
+        max-width: 450px;
+      }
+    }
 
-        #back-button {
-            background-color: #90EE93;
-            color:  #131313;
-            border: 2px solid #131313;;
-            border-radius: 1px;
-            margin-top: 2px;
-            
-            font-size: 15px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: bold;
-        }
-        
-        #register-button {
-            background-color: #90EE90;
-            color: #131313;
-            border: 2px solid #131313;;
-            border-radius: 1px;
-            margin-top: 2px;
-            
-            font-size: 15px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: bold;
-        }
-
-        input {
-            font-size: 15px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: bold;
-            padding: 5px;
-            background-color: transparent; /* Removes background */
-            border: none; /* Removes all borders */
-            border-bottom: 2px solid #000; /* Adds a bottom border */
-            outline: none; /* Removes the default focus outline */
-        }
-        input::placeholder {
-            color: #131313; /* Change this to your desired color */
-        }
-        #name {
-            margin-bottom: 10px;
-        }
-
-        #capture-button:hover {
-            background-color: #90EE90;
-        }
-        #back-button:hover {
-            background-color: #90EE90;
-        }
-        #register-button:hover {
-            background-color: #90EE90;
-        }
-
-        video {
-            border: 1px solid #000000;
-            border-radius: 4px;
-            width: 600px;
-            height: 600px;
-            object-fit: cover;
-        }
+    .container-all {
+      background: rgba(205, 207, 203, 0.74);
+      min-height: 60vh;
+      padding-bottom: 3rem;
+    }
 
     .container-all h1 {
-      font-size: 32px;
-      margin-bottom: 20px;
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
       text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-      color:rgb(48, 163, 73);
+      color: rgb(48, 163, 73);
+      text-align: center;
     }
 
     .container-all p {
-      font-size: 14px;
-      margin-bottom: 40px;
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
       color: black;
+      text-align: center;
     }
-    .container-all {
-        height: 100vh;
-        width: 100vw;
-        background:rgba(205, 207, 203, 0.74) ;
-        display: flex; /* Add flexbox to center content */
-        justify-content: center; /* Center horizontally */
-        align-items: center; /* Center vertically */
+
+    .right-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    /* Scanner Pic container */
+    .pic_scanner {
+      width: 50%; 
+      object-fit: cover;
+      
+    }
+
+
+    /* Form controls */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 350px;
+      align-items: center;
+    }
+
+    input {
+      width: 100%;
+      font-size: 1rem;
+      font-family: 'Roboto', sans-serif;
+      font-weight: bold;
+      padding: 0.75rem 0.5rem;
+      margin-bottom: 1.2rem;
+      background-color: transparent;
+      border: none;
+      border-bottom: 2px solid #000;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #131313;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: 0.7rem;
+
+    }
+
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      margin-top: 50px;
+      font-family: 'Roboto', sans-serif;
+      font-weight: bold;
+      border: 2px solid #131313;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    #capture-button {
+      background-color: #64A651;
+      color: #131313;
+    }
+
+    #back-button {
+      background-color: #90EE93;
+      color: #131313;
+    }
+    
+    #register-button {
+      background-color: #90EE90;
+      color: #131313;
+    }
+
+    #capture-button:hover, #back-button:hover, #register-button:hover {
+      background-color: #90EE90;
+    }
+
+
+    /* Status message container */
+    .bottom-container {
+      background-color: #64A651;
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 350px;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 1rem;
+      font-family: 'Roboto', sans-serif;
+      font-weight: bold;
+      color: #ffffff;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      
+    }
+
+    @media (min-width: 768px) {
+      .bottom-container {
+        max-width: 400px;
+        font-size: 1.1rem;
+      }
+    }
+
+    /* Hide canvas but keep it accessible */
+    canvas {
+      display: none;
     }
   </style>
-
 </head>
 <body>
 
 <div class="container">
+  <!-- Company info section -->
   <div class="company-info">
     <div>
       <h2><span style="color: #28a745;">SUPERPACK</span> ENTERPRISE</h2>
-      <center><p>Your Box matters</p></center>
+      <p>Your Box matters</p>
     </div>
     <div class="logo">
-      <img src="logo_front.png">
+      <img src="/vinz/img/logo_front.png" alt="Superpack Enterprise Logo">
     </div>
   </div>
+  
+  <!-- Authentication section -->
   <div class="container-all">
-  <h1>Welcome back!</h1>
-  <p>Please Look at the Camera.</p>
-        <div class="right-container">
-
-        <!-- Video element to display webcam stream -->
-        <video id="webcam" autoplay></video>
-
-            <div class="right-container">
-                
-              <input type="text" id="name" placeholder="Enter your name" required>
-                
-                <button id="register-button">Register</button>
-
-                <button id="capture-button">Submit</button>
-
-                <button id="back-button">Back</button>
-            
-            </div>
-
-        <!-- Canvas element to capture and draw image -->
-        <canvas id="canvas" style="display:none;"></canvas>
-
+    <h1>Welcome back!</h1>
+    <p>Please tap your ID.</p>
+    
+    <div class="right-container">
+      <div class="pic_scanner">
+        <img src="/vinz/img/scan.png" alt="RFID Scanning" style="width: 100%; border-radius: 8px; border: 1px solid #000000;">
+      </div>
+      
+      <!-- Form controls -->
+      <div class="controls">
+        
+        
+        <div class="button-group">
+          <button id="register-button"><a href="register.php"></a>Register</button>
+          
         </div>
-
-        <div class="bottom-container">
-
-            <!-- Text that changes to show the user the registration status -->
-            <p id="status">Registration status: Waiting for capture...</p>
-
-        </div>
+      </div>
+      
+    
+    </div>
+  </div>
+  
 </div>
 
 <script>
-        // Return to the welcome page when the back button is clicked
-        document.getElementById('back-button').addEventListener('click', function() {
-            window.location.href = '../../login.php';
-        });
+  // Return to the welcome page when the back button is clicked
+  document.getElementById('back-button').addEventListener('click', function() {
+    window.location.href = '../../login.php';
+  });
 
-        // Redirect to the register page when the register button is clicked
-        document.getElementById('register-button').addEventListener('click', function() {
-            window.location.href = 'register.php';
-        });
+  // Redirect to the register page when the register button is clicked
+  document.getElementById('register-button').addEventListener('click', function() {
+    window.location.href = 'register.php';
+  });
 
-        // Get elements from the DOM
-        const webcamElement = document.getElementById('webcam');
-        const canvasElement = document.getElementById('canvas');
-        const captureButton = document.getElementById('capture-button');
-        const canvasContext = canvasElement.getContext('2d');
 
-        // Initialize webcam stream
-        function initWebcam() {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then((stream) => {
-                    webcamElement.srcObject = stream;
-                })
-                .catch((error) => {
-                    console.error("Error accessing webcam: ", error);
-                });
-        }
+  
+      
+      
 
-        // Capture image function
-        function captureImage() {
-            // Set canvas width and height to video element's width and height
-            canvasElement.width = webcamElement.videoWidth;
-            canvasElement.height = webcamElement.videoHeight;
 
-            // Draw the current frame from the video to the canvas
-            canvasContext.drawImage(webcamElement, 0, 0, canvasElement.width, canvasElement.height);
-            
-            // Convert the canvas to a base64-encoded PNG image
-            const image = canvasElement.toDataURL('image/png');
-            
-            const name = document.getElementById('name').value;
-            
-            // Prepare the data payload to send to the Python script
-            const dataPayload = { 
-            image: image.split(',')[1], // Extract base64 string without the data URL prefix
-            name: name,
-            };
-            
-            // display the payload
-            //console.log(dataPayload);
-
-            // Send the image data to the Python script
-            fetch('https://superpack-adu.com:5000/Face_API/mark-attendance', {  // Adjust the URL to your Python script's path
-            method: 'POST',
-            body: JSON.stringify(dataPayload),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-            })
-            .then((response) => response.json()) // Parse the JSON response
-            .then((data) => { 
-            console.log("Server response:", data); // Log the server response to the console 
-            // if the response has success: true, then the face redirect to other page
-            if (data.success) {
-                console.log("Attendance Marked!");
-                
-                document.getElementById('status').textContent = data.message;
-
-                document.querySelector('.bottom-container').style.backgroundColor = '#64A651';
-                
-                // make bottom container visible
-                document.querySelector('.bottom-container').style.display = 'block';
-
-                // Create a form element
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/../Capstone2/dashboardnew.php';  // PHP file that will set the session
-
-                // Hidden input for username
-                const inputName = document.createElement('input');
-                inputName.type = 'hidden';
-                inputName.name = 'username';
-                inputName.value = data.name;
-                form.appendChild(inputName);
-
-                // Hidden input for role
-                const inputRole = document.createElement('input');
-                inputRole.type = 'hidden';
-                inputRole.name = 'role';
-                inputRole.value = data.role;
-                form.appendChild(inputRole);
-
-                // Hidden input for department
-                const inputDepartment = document.createElement('input');
-                inputDepartment.type = 'hidden';
-                inputDepartment.name = 'user_department';
-                inputDepartment.value = data.department;
-                form.appendChild(inputDepartment);
-
-                // Hidden input for loggedin variable
-                const inputLoggedIn = document.createElement('input');
-                inputLoggedIn.type = 'hidden';
-                inputLoggedIn.name = 'loggedin';
-                inputLoggedIn.value = true;
-                form.appendChild(inputLoggedIn);
-
-                // Append the form to the body
-                document.body.appendChild(form);
-
-                // Submit the form
-                form.submit();
-
-                
-            } else {
-                console.log("Error: ", data.error);
-                
-                document.getElementById('status').textContent = data.message;
-                // make bottom container visible
-                document.querySelector('.bottom-container').style.display = 'block';
-                // make bottom container background color red
-                document.querySelector('.bottom-container').style.backgroundColor = '#FF4C4C';
-
-                // dissapear the bottom container after 3 seconds
-                setTimeout(() => {
-                document.querySelector('.bottom-container').style.display = 'none';
-                }, 2500);
-            }
-            })
-            .catch((error) => {
-            console.error("Error sending image to server: ", error);
-
-            
-            document.getElementById('status').textContent = "Error sending image to server.";
-            // make bottom container visible
-            document.querySelector('.bottom-container').style.display = 'block';
-            // make bottom container background color red
-            document.querySelector('.bottom-container').style.backgroundColor = '#FF4C4C';
-
-            // dissapear the bottom container after 3 seconds
-            setTimeout(() => {
-                document.querySelector('.bottom-container').style.display = 'none';
-            }, 2500);
-            });
-        }
-
-        // Initialize webcam on page load
-        initWebcam();
-
-        // Capture image when button is clicked
-        captureButton.addEventListener('click', captureImage);
-    </script>
+</script>
 </body>
 </html>
