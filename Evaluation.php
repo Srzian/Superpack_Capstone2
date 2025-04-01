@@ -1,9 +1,18 @@
 <?php
 session_start();
 
-// Initialize evaluations in session if not already set
-if (!isset($_SESSION['evaluations'])) {
-    $_SESSION['evaluations'] = [];
+// Database connection parameters
+$host = 'localhost'; // Your database host
+$db = 'employee_evaluations'; // Your database name
+$user = 'root'; // Your database username
+$pass = ''; // Leave this empty if you have no password
+
+// Create a connection
+$conn = new mysqli($host, $user, $pass, $db);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 
 // Handle evaluation addition
@@ -29,26 +38,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addEvaluation'])) {
     $professionalism_work_ethic = $_POST['professionalism_work_ethic'] ?? '';
     $overall_performance = $_POST['overall_performance'] ?? '';
 
-    // Add the new evaluation to the session array
-    $_SESSION['evaluations'][] = [
-        'employee_name' => $employee_name,
-        'position' => $position,
-        'evaluation_date' => "$evaluation_year-$evaluation_month-$evaluation_date",
-        'evaluator_name' => $evaluator_name,
-        'remarks' => $remarks,
-        'ratings' => [
-            'work_quality' => $work_quality,
-            'efficiency_productivity' => $efficiency_productivity,
-            'communication_skills' => $communication_skills,
-            'teamwork_collaboration' => $teamwork_collaboration,
-            'initiative_problem_solving' => $initiative_problem_solving,
-            'adaptability_flexibility' => $adaptability_flexibility,
-            'reliability_accountability' => $reliability_accountability,
-            'attendance_punctuality' => $attendance_punctuality,
-            'professionalism_work_ethic' => $professionalism_work_ethic,
-            'overall_performance' => $overall_performance,
-        ],
-    ];
+    // Create the evaluation date string
+    $full_evaluation_date = "$evaluation_year-$evaluation_month-$evaluation_date";
+
+    // Insert into the database
+    $stmt = $conn->prepare("INSERT INTO evaluations (employee_name, position, evaluation_date, evaluator_name, remarks, work_quality, efficiency_productivity, communication_skills, teamwork_collaboration, initiative_problem_solving, adaptability_flexibility, reliability_accountability, attendance_punctuality, professionalism_work_ethic, overall_performance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssssssssssssss", $employee_name, $position, $full_evaluation_date, $evaluator_name, $remarks, $work_quality, $efficiency_productivity, $communication_skills, $teamwork_collaboration, $initiative_problem_solving, $adaptability_flexibility, $reliability_accountability, $attendance_punctuality, $professionalism_work_ethic, $overall_performance);
+    $stmt->execute();
+    $stmt->close();
 
     // Redirect to the same page to refresh the evaluations list
     header('Location: ' . $_SERVER['PHP_SELF']);
@@ -58,18 +55,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addEvaluation'])) {
 // Handle evaluation deletion
 if (isset($_GET['delete'])) {
     $recordIndex = (int)$_GET['delete']; // Ensure the index is an integer
-    if (isset($_SESSION['evaluations'][$recordIndex])) {
-        unset($_SESSION['evaluations'][$recordIndex]); // Remove the record
-        $_SESSION['evaluations'] = array_values($_SESSION['evaluations']); // Re-index the array
-    }
+    $stmt = $conn->prepare("DELETE FROM evaluations WHERE id = ?");
+    $stmt->bind_param("i", $recordIndex);
+    $stmt->execute();
+    $stmt->close();
     header('Location: ' . $_SERVER['PHP_SELF']); // Refresh the page
     exit;
 }
 
+// Fetch evaluations from the database
+$result = $conn->query("SELECT * FROM evaluations");
+$evaluations = $result->fetch_all(MYSQLI_ASSOC);
+
 // Get unique years for the filter
 $years = array_unique(array_map(function($evaluation) {
     return date('Y', strtotime($evaluation['evaluation_date']));
-}, $_SESSION['evaluations']));
+}, $evaluations));
 $years = array_values($years); // Re-index the array
 
 // Filter evaluations by search keyword and year
@@ -77,11 +78,14 @@ $searchKeyword = isset($_POST['search']) ? $_POST['search'] : '';
 $yearFilter = isset($_POST['year_filter']) ? $_POST['year_filter'] : '';
 
 // Filter evaluations based on search and year
-$filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evaluation) use ($searchKeyword, $yearFilter) {
+$filtered_evaluations = array_filter($evaluations, function ($evaluation) use ($searchKeyword, $yearFilter) {
     $matchesSearch = !$searchKeyword || stripos($evaluation['employee_name'], $searchKeyword) !== false;
     $matchesYear = !$yearFilter || date('Y', strtotime($evaluation['evaluation_date'])) == $yearFilter;
     return $matchesSearch && $matchesYear;
 });
+
+// Close the database connection
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -397,7 +401,7 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                     <label> Work Quality – How well does the employee produce accurate and high-quality work?</label>
                     <div class="stars" id="work_quality">
                         <span class="star" data-value="1">★</span>
-                        <span class="star" data-value="2">★</span>
+                        < span class="star" data-value="2">★</span>
                         <span class="star" data-value="3">★</span>
                         <span class="star" data-value="4">★</span>
                         <span class="star" data-value="5">★</span>
@@ -406,11 +410,12 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                         <span class="star" data-value="8">★</span>
                         <span class="star" data-value="9">★</span>
                         <span class="star" data-value="10">★</span>
-                        <input type="hidden" name="work_quality" id="work_quality_input" required>
                     </div>
+                    <input type="hidden" name="work_quality" id="work_quality_input" value="">
                 </div>
+
                 <div class="question">
-                    <label> Efficiency & Productivity – How effectively does the employee complete tasks within deadlines?</label>
+                    <label> Efficiency & Productivity – How effectively does the employee manage their time and resources?</label>
                     <div class="stars" id="efficiency_productivity">
                         <span class="star" data-value="1">★</span>
                         <span class="star" data-value="2">★</span>
@@ -422,11 +427,12 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                         <span class="star" data-value="8">★</span>
                         <span class="star" data-value="9">★</span>
                         <span class="star" data-value="10">★</span>
-                        <input type="hidden" name="efficiency_productivity" id="efficiency_productivity_input" required>
                     </div>
+                    <input type="hidden" name="efficiency_productivity" id="efficiency_productivity_input" value="">
                 </div>
+
                 <div class="question">
-                    <label> Communication Skills – How clearly and professionally does the employee communicate with others?</label>
+                    <label> Communication Skills – How well does the employee communicate with others?</label>
                     <div class="stars" id="communication_skills">
                         <span class="star" data-value="1">★</span>
                         <span class="star" data-value="2">★</span>
@@ -438,11 +444,12 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                         <span class="star" data-value="8">★</span>
                         <span class="star" data-value="9">★</span>
                         <span class="star" data-value="10">★</span>
-                        <input type="hidden" name="communication_skills" id="communication_skills_input" required>
                     </div>
+                    <input type="hidden" name="communication_skills" id="communication_skills_input" value="">
                 </div>
+
                 <div class="question">
-                    <label> Teamwork & Collaboration – How well does the employee work with colleagues and contribute to team success?</label>
+                    <label> Teamwork & Collaboration – How well does the employee work with others?</label>
                     <div class="stars" id="teamwork_collaboration">
                         <span class="star" data-value="1">★</span>
                         <span class="star" data-value="2">★</span>
@@ -454,11 +461,12 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                         <span class="star" data-value="8">★</span>
                         <span class="star" data-value="9">★</span>
                         <span class="star" data-value="10">★</span>
-                        <input type="hidden" name="teamwork_collaboration" id="teamwork_collaboration_input" required>
                     </div>
+                    <input type="hidden" name="teamwork_collaboration" id="teamwork_collaboration_input" value="">
                 </div>
+
                 <div class="question">
-                    <label> Initiative & Problem-Solving – How often does the employee take the initiative to solve problems and improve work processes?</label>
+                    <label> Initiative & Problem Solving – How well does the employee take initiative and solve problems?</label>
                     <div class="stars" id="initiative_problem_solving">
                         <span class="star" data-value="1">★</span>
                         <span class="star" data-value="2">★</span>
@@ -467,14 +475,16 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                         <span class="star" data-value="5">★</span>
                         <span class="star" data-value="6">★</span>
                         <span class="star" data-value="7">★</span>
+                        <span ```php
                         <span class="star" data-value="8">★</span>
                         <span class="star" data-value="9">★</span>
                         <span class="star" data-value="10">★</span>
-                        <input type="hidden" name="initiative_problem_solving" id="initiative_problem_solving_input" required>
                     </div>
+                    <input type="hidden" name="initiative_problem_solving" id="initiative_problem_solving_input" value="">
                 </div>
+
                 <div class="question">
-                    <label> Adaptability & Flexibility – How well does the employee handle changes in responsibilities or work conditions?</label>
+                    <label> Adaptability & Flexibility – How well does the employee adapt to changes and new situations?</label>
                     <div class="stars" id="adaptability_flexibility">
                         <span class="star" data-value="1">★</span>
                         <span class="star" data-value="2">★</span>
@@ -486,11 +496,12 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                         <span class="star" data-value="8">★</span>
                         <span class="star" data-value="9">★</span>
                         <span class="star" data-value="10">★</span>
-                        <input type="hidden" name="adaptability_flexibility" id="adaptability_flexibility_input" required>
                     </div>
+                    <input type="hidden" name="adaptability_flexibility" id="adaptability_flexibility_input" value="">
                 </div>
+
                 <div class="question">
-                    <label> Reliability & Accountability – How dependable is the employee in completing assigned tasks and meeting expectations?</label>
+                    <label> Reliability & Accountability – How reliable and accountable is the employee?</label>
                     <div class="stars" id="reliability_accountability">
                         <span class="star" data-value="1">★</span>
                         <span class="star" data-value="2">★</span>
@@ -502,11 +513,12 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                         <span class="star" data-value="8">★</span>
                         <span class="star" data-value="9">★</span>
                         <span class="star" data-value="10">★</span>
-                        <input type="hidden" name="reliability_accountability" id="reliability_accountability_input" required>
                     </div>
+                    <input type="hidden" name="reliability_accountability" id="reliability_accountability_input" value="">
                 </div>
+
                 <div class="question">
-                    <label> Attendance & Punctuality – How consistent is the employee in arriving on time and maintaining good attendance?</label>
+                    <label> Attendance & Punctuality – How well does the employee adhere to attendance and punctuality?</label>
                     <div class="stars" id="attendance_punctuality">
                         <span class="star" data-value="1">★</span>
                         <span class="star" data-value="2">★</span>
@@ -518,11 +530,12 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                         <span class="star" data-value="8">★</span>
                         <span class="star" data-value="9">★</span>
                         <span class="star" data-value="10">★</span>
-                        <input type="hidden" name="attendance_punctuality" id="attendance_punctuality_input" required>
                     </div>
+                    <input type="hidden" name="attendance_punctuality" id="attendance_punctuality_input" value="">
                 </div>
+
                 <div class="question">
-                    <label> Professionalism & Work Ethic – How well does the employee demonstrate professionalism and dedication to their work?</label>
+                    <label> Professionalism & Work Ethic – How professional is the employee in their work ethic?</label>
                     <div class="stars" id="professionalism_work_ethic">
                         <span class="star" data-value="1">★</span>
                         <span class="star" data-value="2">★</span>
@@ -534,20 +547,37 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                         <span class="star" data-value="8">★</span>
                         <span class="star" data-value="9">★</span>
                         <span class="star" data-value="10">★</span>
-                        <input type="hidden" name="professionalism_work_ethic" id="professionalism_work_ethic_input" required>
                     </div>
+                    <input type="hidden" name="professionalism_work_ethic" id=" professionalism_work_ethic_input" value="">
+                </div>
+
+                <div class="question">
+                    <label> Overall Performance – How would you rate the overall performance of the employee?</label>
+                    <div class="stars" id="overall_performance">
+                        <span class="star" data-value="1">★</span>
+                        <span class="star" data-value="2">★</span>
+                        <span class="star" data-value="3">★</span>
+                        <span class="star" data-value="4">★</span>
+                        <span class="star" data-value="5">★</span>
+                        <span class="star" data-value="6">★</span>
+                        <span class="star" data-value="7">★</span>
+                        <span class="star" data-value="8">★</span>
+                        <span class="star" data-value="9">★</span>
+                        <span class="star" data-value="10">★</span>
+                    </div>
+                    <input type="hidden" name="overall_performance" id="overall_performance_input" value="">
                 </div>
 
                 <label for="remarks">Remarks:</label>
-                <textarea name="remarks" placeholder="Add comments here..." rows="4"></textarea>
+                <textarea name="remarks" placeholder="Enter any additional remarks here..."></textarea>
 
-                <button type="submit" name="addEvaluation" class="add-record-btn">Add Evaluation</button>
-                <button type="button" onclick="document.getElementById('evaluation-modal').style.display = 'none';">Cancel</button>
+                <button type="submit">Submit Evaluation</button>
             </form>
+            <button onclick="document.getElementById('evaluation-modal').style.display = 'none';">Close</button>
         </div>
     </div>
 
-    <!-- Evaluations Table -->
+    <!-- Evaluation Table -->
     <table class="evaluation-table">
         <thead>
             <tr>
@@ -555,19 +585,21 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
                 <th>Position</th>
                 <th>Evaluation Date</th>
                 <th>Evaluator Name</th>
+                <th>Remarks</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($filtered_evaluations as $index => $evaluation): ?>
+            <?php foreach ($filtered_evaluations as $evaluation): ?>
                 <tr>
                     <td><?php echo htmlspecialchars($evaluation['employee_name']); ?></td>
                     <td><?php echo htmlspecialchars($evaluation['position']); ?></td>
                     <td><?php echo htmlspecialchars($evaluation['evaluation_date']); ?></td>
                     <td><?php echo htmlspecialchars($evaluation['evaluator_name']); ?></td>
+                    <td><?php echo htmlspecialchars($evaluation['remarks']); ?></td>
                     <td class="action-buttons">
-                        <button onclick="seeMoreEvaluation(<?php echo htmlspecialchars(json_encode($evaluation)); ?>)">See More</button>
-                        <a href="?delete=<?php echo $index; ?>" onclick="return confirm('Are you sure you want to delete this evaluation?');" class="delete-button">Delete</a>
+                        <button class="print-button" onclick="printEvaluation(<?php echo $evaluation['id']; ?>)">Print</button>
+                        <button class="delete-button" onclick="if(confirm('Are you sure you want to delete this evaluation?')) { window.location.href='?delete=<?php echo $evaluation['id']; ?>'; }">Delete</button>
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -576,98 +608,120 @@ $filtered_evaluations = array_filter($_SESSION['evaluations'], function ($evalua
 </div>
 
 <script>
-    // Function to handle star rating selection
+    // Star rating functionality
     document.querySelectorAll('.stars').forEach(starContainer => {
-        starContainer.addEventListener('click', (event) => {
-            if (event.target.classList.contains('star')) {
-                const rating = event.target.getAttribute('data-value');
-                const inputId = starContainer.id + '_input';
-                document.getElementById(inputId).value = rating;
-
-                // Remove selected class from all stars
-                starContainer.querySelectorAll('.star').forEach(star => {
-                    star.classList.remove('selected');
-                });
-
-                // Add selected class to the clicked star and all previous stars
-                for (let i = 1; i <= rating; i++) {
-                    starContainer.querySelector(`.star[data-value="${i}"]`).classList.add('selected');
+        const stars = starContainer.querySelectorAll('.star');
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                const value = star.getAttribute('data-value');
+                stars.forEach(s => s.classList.remove('selected'));
+                for (let i = 0; i < value; i++) {
+                    stars[i].classList.add('selected');
                 }
-            }
+                const inputId = starContainer.id + '_input';
+                document.getElementById(inputId).value = value;
+            });
         });
     });
 
+    // Dropdown toggle for sidebar
     function toggleDropdown(element) {
         const dropdown = element.nextElementSibling;
-        const allDropdowns = document.querySelectorAll('.dropdown');
-
-        // Close all other dropdowns
-        allDropdowns.forEach(function (d) {
-            if (d !== dropdown) {
-                d.style.display = 'none';
-            }
-        });
-
-        // Toggle the clicked dropdown
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
     }
 
-    // Close dropdowns when clicking outside
-    window.onclick = function(event) {
-        if (!event.target.matches('.dropdown-toggle')) {
-            const allDropdowns = document.querySelectorAll('.dropdown');
-            allDropdowns.forEach(function (d) {
-                d.style.display = 'none';
-            });
-        }
-    };
+    // Print evaluation function
+    function printEvaluation(id) {
+        const evaluation = <?php echo json_encode($filtered_evaluations); ?>.find(e => e.id == id);
+        const starCount = (question) => {
+            return '★'.repeat(parseInt(evaluation[question])) + '☆'.repeat(10 - parseInt(evaluation[question]));
+        };
 
-    function seeMoreEvaluation(evaluation) {
-        // Create a modal to display evaluation details
-        const modalContent = `
-            <div style="background: white; padding: 20px; border-radius: 8px; width: 600px; max-width: 90%;">
-                <h2>Evaluation Details for ${evaluation.employee_name}</h2>
-                <p><strong>Position:</strong> ${evaluation.position}</p>
-                <p><strong>Evaluation Date:</strong> ${evaluation.evaluation_date}</p>
-                <p><strong>Evaluator name:</strong> ${evaluation.evaluator_name}</p>
-                <h3>Ratings:</h3>
-                <p>Work Quality: ${evaluation.ratings.work_quality} ⭐</p>
-                <p>Efficiency & Productivity: ${evaluation.ratings.efficiency_productivity} ⭐</p>
-                <p>Communication Skills: ${evaluation.ratings.communication_skills} ⭐</p>
-                <p>Teamwork & Collaboration: ${evaluation.ratings.teamwork_collaboration} ⭐</p>
-                <p>Initiative & Problem-Solving: ${evaluation.ratings.initiative_problem_solving} ⭐</p>
-                <p>Adaptability & Flexibility: ${evaluation.ratings.adaptability_flexibility} ⭐</p>
-                <p>Reliability & Accountability: ${evaluation.ratings.reliability_accountability} ⭐</p>
-                <p>Attendance & Punctuality: ${evaluation.ratings.attendance_punctuality} ⭐</p>
-                <p>Professionalism & Work Ethic: ${evaluation.ratings.professionalism_work_ethic} ⭐</p>
-                <p>Overall Performance: ${evaluation.ratings.overall_performance} ⭐</p>
-                <h3>Remarks:</h3>
-                <p>${evaluation.remarks}</p>
-                <button onclick="closeModal()">Close</button>
-            </div>
-        `;
-        
-        const seeMoreModal = document.createElement('div');
-        seeMoreModal.id = 'see-more-modal';
-        seeMoreModal.style.position = 'fixed';
-        seeMoreModal.style.top = '0';
-        seeMoreModal.style.left = '0';
-        seeMoreModal.style.width = '100%';
-        seeMoreModal.style.height = '100%';
-        seeMoreModal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        seeMoreModal.style.display = 'flex';
-        seeMoreModal.style.justifyContent = 'center';
-        seeMoreModal.style.alignItems = 'center';
-        seeMoreModal.innerHTML = modalContent;
-        
-        document.body.appendChild(seeMoreModal);
-    }
-
-    function closeModal() {
-        const modal = document.getElementById('see-more-modal');
-        if (modal) {
-            modal.remove(); // Remove the modal from the DOM
-        }
+        const printWindow = window.open('', '', 'height=600,width=800');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Print Evaluation</title>
+                <style>
+                    body { font-family: Arial, sans-serif; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    .logo { text-align: center; margin-bottom: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="logo">
+                    <img src="LOGO.png " alt="Company Logo" style="width: 150px;">
+                </div>
+                <h2>Employee Evaluation</h2>
+                <table>
+                    <tr>
+                        <th>Employee Name</th>
+                        <td>${evaluation.employee_name}</td>
+                    </tr>
+                    <tr>
+                        <th>Position</th>
+                        <td>${evaluation.position}</td>
+                    </tr>
+                    <tr>
+                        <th>Evaluation Date</th>
+                        <td>${evaluation.evaluation_date}</td>
+                    </tr>
+                    <tr>
+                        <th>Evaluator Name</th>
+                        <td>${evaluation.evaluator_name}</td>
+                    </tr>
+                    <tr>
+                        <th>Remarks</th>
+                        <td>${evaluation.remarks}</td>
+                    </tr>
+                    <tr>
+                        <th>Work Quality</th>
+                        <td>${starCount('work_quality')}</td>
+                    </tr>
+                    <tr>
+                        <th>Efficiency & Productivity</th>
+                        <td>${starCount('efficiency_productivity')}</td>
+                    </tr>
+                    <tr>
+                        <th>Communication Skills</th>
+                        <td>${starCount('communication_skills')}</td>
+                    </tr>
+                    <tr>
+                        <th>Teamwork & Collaboration</th>
+                        <td>${starCount('teamwork_collaboration')}</td>
+                    </tr>
+                    <tr>
+                        <th>Initiative & Problem Solving</th>
+                        <td>${starCount('initiative_problem_solving')}</td>
+                    </tr>
+                    <tr>
+                        <th>Adaptability & Flexibility</th>
+                        <td>${starCount('adaptability_flexibility')}</td>
+                    </tr>
+                    <tr>
+                        <th>Reliability & Accountability</th>
+                        <td>${starCount('reliability_accountability')}</td>
+                    </tr>
+                    <tr>
+                        <th>Attendance & Punctuality</th>
+                        <td>${starCount('attendance_punctuality')}</td>
+                    </tr>
+                    <tr>
+                        <th>Professionalism & Work Ethic</th>
+                        <td>${starCount('professionalism_work_ethic')}</td>
+                    </tr>
+                    <tr>
+                        <th>Overall Performance</th>
+                        <td>${starCount('overall_performance')}</td>
+                    </tr>
+                </table>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
     }
 </script>
 
