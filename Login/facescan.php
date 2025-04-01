@@ -1,5 +1,4 @@
-<?php 
-
+<?php
 session_start(); 
 
 ?>
@@ -148,13 +147,32 @@ session_start();
       width: 100%;
     }
 
-    /* Scanner Pic container */
-    .pic_scanner {
-      width: 50%; 
-      object-fit: cover;
-      
+    /* Video container */
+    .video-container {
+      width: 100%;
+      max-width: 350px;
+      margin-bottom: 1.5rem;
     }
 
+    video {
+      width: 100%;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+      border: 1px solid #000000;
+      border-radius: 8px;
+    }
+
+    @media (min-width: 768px) {
+      .video-container {
+        max-width: 400px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .video-container {
+        max-width: 500px;
+      }
+    }
 
     /* Form controls */
     .controls {
@@ -194,7 +212,6 @@ session_start();
       width: 100%;
       padding: 0.75rem;
       font-size: 1rem;
-      margin-top: 50px;
       font-family: 'Roboto', sans-serif;
       font-weight: bold;
       border: 2px solid #131313;
@@ -226,6 +243,13 @@ session_start();
       background-color: #90EE90;
     }
 
+    /* Tablet and larger - side by side buttons */
+    @media (min-width: 768px) {
+      .button-group {
+        flex-direction: row;
+        gap: 0.5rem;
+      }
+    }
 
     /* Status message container */
     .bottom-container {
@@ -246,7 +270,6 @@ session_start();
       display: none;
       z-index: 1000;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      
     }
 
     @media (min-width: 768px) {
@@ -282,24 +305,31 @@ session_start();
     <p>Please tap your ID.</p>
     
     <div class="right-container">
-      <div class="pic_scanner">
-        <img src="/vinz/img/scan.png" alt="RFID Scanning" style="width: 100%; border-radius: 8px; border: 1px solid #000000;">
+      <!-- Video container -->
+      <div class="video-container">
+        <video id="webcam" autoplay></video>
       </div>
       
       <!-- Form controls -->
       <div class="controls">
-        
+        <input type="text" id="name" placeholder="Enter your name" required>
         
         <div class="button-group">
           <button id="register-button"><a href="register.php"></a>Register</button>
-          
+          <button id="capture-button">Submit</button>
+          <button id="back-button">Back</button>
         </div>
       </div>
       
-    
+      <!-- Hidden canvas for capturing images -->
+      <canvas id="canvas"></canvas>
     </div>
   </div>
   
+  <!-- Status message container -->
+  <div class="bottom-container">
+    <p id="status">Registration status: Waiting for capture...</p>
+  </div>
 </div>
 
 <script>
@@ -313,8 +343,48 @@ session_start();
     window.location.href = 'register.php';
   });
 
+  // Get elements from the DOM
+  const webcamElement = document.getElementById('webcam');
+  const canvasElement = document.getElementById('canvas');
+  const captureButton = document.getElementById('capture-button');
+  const canvasContext = canvasElement.getContext('2d');
 
-  
+  /// Initialize webcam stream
+  function initWebcam() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then((stream) => {
+                    webcamElement.srcObject = stream;
+                })
+                .catch((error) => {
+                    console.error("Error accessing webcam: ", error);
+                });
+        }
+
+    // Check if device is mobile to set appropriate constraints
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    const constraints = {
+      video: {
+        facingMode: isMobile ? 'user' : 'user',
+        width: { ideal: 640 },
+        height: { ideal: 640 }
+      }
+    };
+    
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then((stream) => {
+        webcamElement.srcObject = stream;
+      })
+      .catch((error) => {
+        console.error("Error accessing webcam: ", error);
+        document.getElementById('status').textContent = "Cannot access camera. Please allow camera permissions.";
+        document.querySelector('.bottom-container').style.backgroundColor = '#FF4C4C';
+        document.querySelector('.bottom-container').style.display = 'block';
+        
+        setTimeout(() => {
+          document.querySelector('.bottom-container').style.display = 'none';
+        }, 3000);
+      });
       
       
 
