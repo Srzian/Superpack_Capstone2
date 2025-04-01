@@ -2,31 +2,30 @@
 session_start();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Retrieve form data with proper validation
-    $emp_ID = $_POST["emp_ID"] ?? '';
-    $name = $_POST["name"] ?? '';
-    $email = $_POST["email"] ?? '';
-    $role = $_POST["role"] ?? '';
-    $department = $_POST["department"] ?? '';  // Fixed variable name
-    $password = password_hash($_POST["password"] ?? '', PASSWORD_DEFAULT);
-    $image = $_POST["image"] ?? null;  // Handle case where image isn't set
-   
+    // Retrieve form data
+    $emp_ID = $_POST["emp_ID"];
+    $full_name = $_POST["full_name"];
+    $email = $_POST["email"];
+    $password = $_POST["password"];
+    $image = $_POST["image"]; // Base64 encoded image
+
     try {
         require_once("database.php");
 
-        // Then include it in your query:
-$query = "INSERT INTO register (emp_ID, name, email, role, department, password, image) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-$stmt->execute([$emp_ID, $name, $email, $role, $department, $password, $image]);
-        // Redirect after successful registration
-        header("Location: facescan.php");
+        // Insert user data into the database
+        $query = "INSERT INTO users (emp_ID, full_name, email, password, image) VALUES (?, ?, ?, ?, ?)";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$emp_ID, $full_name, $email, $password, $image]);
+
+        // Redirect to login page after successful registration
+        header("Location: login.php");
         exit();
     } catch (PDOException $e) {
         die("Query Error: " . $e->getMessage());
     }
 }
-
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -274,36 +273,15 @@ button:active {
 
                 <!-- Full Name Input -->
                 <div class="input-container">
-                    <input id="name" name="name" type="text" placeholder="Full Name" required>
+                    <input id="full_name" name="full_name" type="text" placeholder="Full Name" required>
                 </div>
 
                 <!-- Last Name Input -->
                 <div class="input-container">
                     <input id="email" name="email" type="email" placeholder="Email Address" required>
                 </div>
-                
-                <!-- Role Selection -->
-        <div class="input-container">
-            <select id="role" name="role" required>
-                <option value="" disabled selected>Select Position</option>
-                <option value="Manager">Manager</option>
-                <option value="Employee">Employee</option>
-            </select>
-        </div>  
-                <!-- Department Selection -->
-        <div class="input-container">
-            <select id="department" name="department" required>
-                <option value="" disabled selected>Select Department</option>
-                <option value="sales">Sales</option>
-                <option value="purchasing">Purchasing</option>
-                <option value="proddev">Product Development</option>
-                <option value="warehouse">Warehouse</option>
-                <option value="logistics">Logistics</option>
-                <option value="accounting">Accounting</option>
-            </select>
-        </div>
 
-        
+    
                 <!-- Password Input -->
                 <div class="input-container">
                     <input id="password" name="password" type="password" placeholder="Password" required>
@@ -326,133 +304,46 @@ button:active {
     </div>
 
     <script>
-    const togglePassword = document.getElementById('togglePassword');
-    const password = document.getElementById('password');
+        const togglePassword = document.getElementById('togglePassword');
+        const password = document.getElementById('password');
 
-    togglePassword.addEventListener('click', () => {
-        if (password.type === 'password') {
-            password.type = 'text';
-            togglePassword.classList.replace('fa-eye', 'fa-eye-slash');
-        } else {
-            password.type = 'password';
-            togglePassword.classList.replace('fa-eye-slash', 'fa-eye');
+        togglePassword.addEventListener('click', () => {
+            if (password.type === 'password') {
+                password.type = 'text';
+                togglePassword.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                password.type = 'password';
+                togglePassword.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        });
+
+        const webcamElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('canvas');
+        const captureButton = document.getElementById('capture-button');
+        const canvasContext = canvasElement.getContext('2d');
+
+        function initWebcam() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then((stream) => {
+                    webcamElement.srcObject = stream;
+                })
+                .catch((error) => {
+                    console.error("Error accessing webcam: ", error);
+                });
         }
-    });
 
-    const webcamElement = document.getElementById('webcam');
-    const canvasElement = document.getElementById('canvas');
-    const captureButton = document.getElementById('capture-button');
-    const canvasContext = canvasElement.getContext('2d');
-    let isWebcamActive = false;
+        function captureImage() {
+            canvasElement.width = webcamElement.videoWidth;
+            canvasElement.height = webcamElement.videoHeight;
+            canvasContext.drawImage(webcamElement, 0, 0, canvasElement.width, canvasElement.height);
 
-    // Initialize Webcam
-    function initWebcam() {
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then((stream) => {
-                webcamElement.srcObject = stream;
-                isWebcamActive = true;
-            })
-            .catch((error) => {
-                console.error("Error accessing webcam: ", error);
-                alert("Unable to access webcam. Please allow permission.");
-            });
-    }
+            const image = canvasElement.toDataURL('image/png');
+            document.getElementById('registrationForm').insertAdjacentHTML('beforeend', `<input type="hidden" name="image" value="${image}">`);
+            alert("Image captured successfully!");
+        }
 
-    // Update the captureImage function to use the correct field name
-function captureImage() {
-    if (!isWebcamActive) {
-        alert("Webcam is not active. Please ensure your webcam is connected and allowed.");
-        return;
-    }
-
-    canvasElement.width = webcamElement.videoWidth;
-    canvasElement.height = webcamElement.videoHeight;
-    canvasContext.drawImage(webcamElement, 0, 0, canvasElement.width, canvasElement.height);
-
-    const image = canvasElement.toDataURL('image/png');
-    const name = document.getElementById('name').value; // Fixed to use 'name' instead of 'full_name'
-    
-    // Add hidden input for the image to the form
-    let imageInput = document.querySelector('input[name="image"]');
-    if (!imageInput) {
-        imageInput = document.createElement('input');
-        imageInput.type = 'hidden';
-        imageInput.name = 'image';
-        document.getElementById('registrationForm').appendChild(imageInput);
-    }
-    imageInput.value = image;
-    
-    alert("Image captured successfully!");
-}
-
-
-        // Add hidden input for the image to the form
-    const imageInput = document.createElement('input');
-    imageInput.type = 'hidden';
-    imageInput.name = 'image';
-    imageInput.value = image;
-    document.getElementById('registrationForm').appendChild(imageInput);
-
-    alert("Image captured successfully!");
-
-    // Submit the form
-    document.getElementById('registrationForm').submit();
-
-
-        
-            // Send the image data to the Python script
-            fetch('https://localhost:5000/Face_API/register', {  // Adjust the URL to your Python script's path
-                method: 'POST',
-                body: JSON.stringify(dataPayload),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then((response) => response.json()) // Parse the JSON response
-            .then((data) => { 
-                console.log("Server response:", data); // Log the server response to the console 
-                if (data.success) {
-                    document.getElementById('status').textContent = data.message;
-
-                    
-                    document.querySelector('.bottom-container').style.backgroundColor = '#64A651';
-                    
-                    // make bottom container visible
-                    document.querySelector('.bottom-container').style.display = 'block';
-
-                    // Redirect to index.php after successful registration
-                    setTimeout(() => { // Delay the redirect for 1 second
-                        window.location.href = 'login.php';
-                    }, 2500);
-                } else {
-                    document.getElementById('status').textContent = data.message;
-                    // make bottom container visible
-                    document.querySelector('.bottom-container').style.display = 'block';
-                    // make bottom container background color red
-                    document.querySelector('.bottom-container').style.backgroundColor = '#FF4C4C';
-
-                    // dissapear the bottom container after 3 seconds
-                    setTimeout(() => {
-                        document.querySelector('.bottom-container').style.display = 'none';
-                    }, 2500);
-                }
-
-            })
-            .catch((error) => {
-                console.error("Error sending image to server: ", error);
-            });
-        
-
-        
-
-        
-    
-
-    // Start Webcam on Page Load
-    initWebcam();
-
-    // Attach Event Listener to Capture Button
-    captureButton.addEventListener('click', captureImage);
-</script>
+        initWebcam();
+        captureButton.addEventListener('click', captureImage);
+    </script>
 </body>
 </html>
